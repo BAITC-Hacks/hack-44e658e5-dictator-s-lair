@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>HackAlem AI — Протокол совещания</title>
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./overrides.css" />
 </head>
 <body>
   <div class="app-shell">
@@ -18,6 +19,7 @@
 
     <main class="main-content">
       <header class="topbar"><div><div class="eyebrow">MEETING PROTOCOL</div><h1 id="pageTitle">Upload a meeting</h1></div><div class="topbar-actions"><span class="privacy-badge">⌁ On-premise ready</span><button class="ghost-btn" id="exportTopBtn" hidden>Download DOCX</button></div></header>
+      <div class="error-box" id="errorBox" hidden role="alert"><span>!</span><div><strong id="errorTitle">Could not process meeting</strong><p id="errorMessage"></p></div><button class="text-btn" id="dismissError">Dismiss</button></div>
 
       <section id="uploadView" class="view-card upload-view">
         <div class="upload-hero"><div class="hero-icon">◉</div><div><h2>Turn conversation into accountable work</h2><p>Upload a meeting recording and get a reviewable protocol with evidence-backed action items.</p></div></div>
@@ -39,5 +41,6 @@
     </main>
   </div>
   <script src="./app.js"></script>
+  <script src="./integration.js?v=2"></script>
 </body>
 </html>
