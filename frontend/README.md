@@ -18,3 +18,19 @@ request to the backend adapter when the API is ready.
 - generated `.docx` protocol from structured JSON, including source quotes
 
 The frontend does not call a cloud API and does not modify the AI/STT pipeline.
+
+## Backend readiness
+
+`integration.js` owns the production adapter. `USE_MOCK` is `false` by default;
+the sample button is an explicit local mock fallback and never hides a failed
+real backend request. The production request is:
+
+```text
+POST /api/meetings/process
+Content-Type: multipart/form-data
+field: file
+```
+
+The response must contain `meeting`, `summary`, `action_items`, and
+`transcript`. Optional null fields are normalized for safe rendering. Network,
+HTTP, invalid JSON, schema, and timeout errors are shown in the UI.
