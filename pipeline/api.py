@@ -10,6 +10,7 @@ from pathlib import Path
 from threading import Lock
 
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
 try:  # supports both `uvicorn pipeline.api:app` and `uvicorn api:app` from pipeline/
     from .run_pipeline import run
@@ -17,6 +18,13 @@ except ImportError:  # pragma: no cover - exercised by direct module execution
     from run_pipeline import run
 
 app = FastAPI(title="HackAlem Meeting Intelligence API", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 MODEL = os.getenv("MEETING_STT_MODEL", "small")
 DEVICE = os.getenv("MEETING_STT_DEVICE", "cpu")
 COMPUTE_TYPE = os.getenv("MEETING_STT_COMPUTE_TYPE", "int8")
