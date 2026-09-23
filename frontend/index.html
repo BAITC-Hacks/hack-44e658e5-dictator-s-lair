@@ -3,45 +3,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HackAlem AI — Протокол совещания</title>
+  <meta name="theme-color" content="#142f40" />
+  <title>HackAlem — Протокол совещания</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23142f40'/%3E%3Ctext x='7' y='24' font-family='Arial' font-size='23' font-weight='700' fill='white'%3EH%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="./overrides.css" />
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><span class="brand-mark">H</span><div><strong>HackAlem AI</strong><small>Meeting intelligence</small></div></div>
-      <div class="sidebar-label">WORKSPACE</div>
-      <button class="nav-item active"><span>▦</span> Meeting protocol</button>
-      <button class="nav-item" id="newMeetingBtn"><span>＋</span> New meeting</button>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">H<span>·</span></span><div><strong>HackAlem</strong><small>Протокол совещания</small></div></div>
+      <div class="sidebar-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
+      <div class="nav-item active" aria-current="page"><span aria-hidden="true">▤</span> Протокол совещания</div>
+      <button class="nav-item" id="newMeetingBtn"><span aria-hidden="true">＋</span> Новое совещание</button>
       <section class="workspace-history" aria-labelledby="historyHeading">
         <div class="sidebar-label" id="historyHeading">ИСТОРИЯ</div>
         <div id="historyList" class="history-list"></div>
         <p id="historyStatus" class="history-status" role="status" aria-live="polite">Загрузка истории…</p>
         <p class="history-note">Протоколы и аудио сохраняются в этом браузере. Очистка данных сайта удалит историю.</p>
       </section>
-      <div class="sidebar-footer"><span class="status-dot"></span> Local processing<br><small>Data stays on device</small></div>
+      <div class="sidebar-context"><span class="sidebar-label">HACKALEM 2026</span><strong>Самрук-Қазына</strong><p>От обсуждения —<br>к конкретным поручениям.</p><span class="demo-label">Демонстрационный проект</span></div>
+      <div class="sidebar-footer"><span class="status-dot" aria-hidden="true"></span> Локальная обработка<small>Аудиозапись остаётся на устройстве</small></div>
     </aside>
-
     <main class="main-content">
-      <header class="topbar"><div><div class="eyebrow">MEETING PROTOCOL</div><h1 id="pageTitle">Upload a meeting</h1></div><div class="topbar-actions"><span class="privacy-badge">⌁ On-premise ready</span><button class="ghost-btn" id="exportTopBtn" hidden>Download DOCX</button></div></header>
-      <div class="error-box" id="errorBox" hidden role="alert"><span>!</span><div><strong id="errorTitle">Could not process meeting</strong><p id="errorMessage"></p></div><button class="text-btn" id="dismissError">Dismiss</button></div>
-
+      <header class="topbar"><div><div class="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО / СОВЕЩАНИЯ</div><h1 id="pageTitle">Протокол совещания</h1></div><div class="topbar-actions"><span class="privacy-badge">Локальный контур</span><button class="ghost-btn" id="exportTopBtn" hidden>Скачать протокол DOCX</button></div></header>
+      <div class="error-box" id="errorBox" hidden role="alert"><span aria-hidden="true">!</span><div><strong id="errorTitle">Не удалось обработать совещание</strong><p id="errorMessage"></p></div><button class="text-btn" id="dismissError">Закрыть</button></div>
       <section id="uploadView" class="view-card upload-view">
-        <div class="upload-hero"><div class="hero-icon">◉</div><div><h2>Turn conversation into accountable work</h2><p>Upload a meeting recording and get a reviewable protocol with evidence-backed action items.</p></div></div>
-        <label class="dropzone" id="dropzone"><input id="audioInput" type="file" accept="audio/*,.mp3,.wav,.m4a" /><span class="upload-icon">↑</span><strong>Drop an audio file here</strong><span>or click to browse · MP3, WAV, M4A</span><button type="button" class="primary-btn" id="browseBtn">Choose audio</button></label>
+        <div class="upload-hero"><div class="eyebrow">ИЗ ЗАПИСИ — В ПРОТОКОЛ</div><h2>Загрузите запись совещания</h2><p>Система подготовит транскрипт, решения, поручения, ответственных и сроки.</p></div>
+        <label class="dropzone" id="dropzone"><input id="audioInput" type="file" accept="audio/*,.mp3,.wav,.m4a,.mp4,.webm,.ogg" aria-label="Запись совещания" /><span class="upload-icon" aria-hidden="true">↑</span><strong>Перетащите аудиозапись сюда</strong><span>или выберите файл на компьютере</span><button type="button" class="primary-btn" id="browseBtn">Выбрать аудиозапись</button><small>MP3, WAV, M4A, MP4, WebM, OGG</small></label>
+        <div class="upload-steps"><div><span>01</span><strong>Загрузите запись</strong><p>Обработка займёт несколько минут</p></div><div><span>02</span><strong>Проверьте поручения</strong><p>Сверьте формулировки с аудио</p></div><div><span>03</span><strong>Скачайте протокол</strong><p>Документ DOCX с вашими правками</p></div></div>
+        <div class="upload-footnote"><span class="status-dot" aria-hidden="true"></span> Локальная обработка · Перед экспортом проверьте результат</div>
       </section>
-
       <section id="processingView" class="view-card processing-view" hidden>
-        <div class="processing-header"><div class="spinner"></div><div><div class="eyebrow">PROCESSING MEETING</div><h2 id="processingFile">Preparing your recording</h2><p id="processingHint">The audio remains local while the protocol is created.</p></div></div>
-        <div class="stage-list"><div class="stage done" data-stage="upload"><span>✓</span><div><strong>Audio uploaded</strong><small>File received and ready</small></div></div><div class="stage active" data-stage="stt"><span>●</span><div><strong>Processing meeting</strong><small>Распознавание и анализ аудиозаписи</small></div></div><div class="stage" data-stage="tasks"><span>○</span><div><strong>Extracting tasks</strong><small>Linking owners, deadlines and evidence</small></div></div><div class="stage" data-stage="protocol"><span>○</span><div><strong>Generating protocol</strong><small>Preparing the review workspace</small></div></div></div>
-        <div class="processing-tip"><span>◌</span> Обработка аудиозаписи может занять несколько минут.</div>
+        <div class="processing-header"><div class="spinner" aria-hidden="true"></div><div><div class="eyebrow">ОБРАБОТКА СОВЕЩАНИЯ</div><h2 id="processingFile">Подготовка аудиозаписи</h2><p id="processingHint" role="status">Обработка аудиозаписи может занять несколько минут.</p></div></div>
+        <div class="stage-list"><div class="stage done" data-stage="upload"><span>✓</span><div><strong>Запись загружена</strong><small>Файл получен и готов к обработке</small></div></div><div class="stage active" data-stage="stt"><span>●</span><div><strong>Распознавание и анализ</strong><small>Подготовка транскрипта совещания</small></div></div><div class="stage" data-stage="tasks"><span>○</span><div><strong>Выделение поручений</strong><small>Ответственные, сроки и первоисточники</small></div></div><div class="stage" data-stage="protocol"><span>○</span><div><strong>Подготовка протокола</strong><small>Результат для проверки и редактирования</small></div></div></div>
+        <div class="processing-tip">Не закрывайте страницу до завершения обработки.</div>
       </section>
-
       <section id="resultView" hidden>
-        <div class="result-meta"><div><div class="eyebrow">PROCESSED MEETING</div><h2 id="meetingTitle"></h2><div class="meta-line"><span id="meetingDate"></span><span id="meetingDuration"></span><span id="meetingLanguage"></span></div></div><div class="result-actions"><span class="ready-pill">● Ready for review</span><button class="primary-btn" id="exportBtn">Download DOCX</button></div></div>
-        <div class="metric-row"><div class="metric"><span class="metric-label">ACTION ITEMS</span><strong id="taskCount">0</strong><small>Review before export</small></div><div class="metric"><span class="metric-label">DECISIONS</span><strong id="decisionCount">0</strong><small>Captured from discussion</small></div><div class="metric"><span class="metric-label">TRANSCRIPT</span><strong id="segmentCount">0</strong><small>Timestamped segments</small></div><div class="metric"><span class="metric-label">CONFIDENCE</span><strong id="confidenceValue">—</strong><small>Average extraction score</small></div></div>
-        <div class="content-grid"><div class="primary-column"><section class="panel"><div class="panel-heading"><div><div class="eyebrow">EXECUTIVE SUMMARY</div><h3>What happened</h3></div></div><p class="summary-text" id="summaryText"></p></section><section class="panel"><div class="panel-heading"><div><div class="eyebrow">KEY TOPICS</div><h3>Discussion map</h3></div></div><div class="topic-list" id="topicList"></div></section><section class="panel"><div class="panel-heading"><div><div class="eyebrow">DECISIONS</div><h3>What was agreed</h3></div></div><div id="decisionList" class="decision-list"></div></section><section class="panel"><div class="panel-heading"><div><div class="eyebrow">ACTION ITEMS</div><h3>Accountability board</h3></div><span class="panel-note">Edit fields before export</span></div><div id="taskList" class="task-list"></div></section></div><aside class="secondary-column"><section class="panel audio-panel"><div class="panel-heading"><div><div class="eyebrow">AUDIO EVIDENCE</div><h3>Listen to the source</h3></div><span class="evidence-label">● LIVE</span></div><audio id="audioPlayer" controls preload="metadata"></audio><div class="now-playing" id="nowPlaying">Select a timestamp or “Play evidence” to hear the source phrase.</div></section><section class="panel transcript-panel"><div class="panel-heading"><div><div class="eyebrow">TRANSCRIPT</div><h3>Conversation timeline</h3></div><span class="panel-note">Click time to seek</span></div><div id="transcriptList" class="transcript-list"></div></section></aside></div>
+        <div class="result-meta"><div><div class="eyebrow">ЗАПИСЬ СОВЕЩАНИЯ</div><h2 id="meetingTitle"></h2><div class="meta-line"><span id="meetingDate"></span><span id="meetingDuration"></span><span id="meetingLanguage"></span></div></div><div class="result-actions"><span class="ready-pill"><span class="status-dot" aria-hidden="true"></span>Готово к проверке</span></div></div>
+        <div class="metric-row"><div class="metric metric-primary"><span class="metric-label">Поручения</span><strong id="taskCount">0</strong><small>Проверьте ответственных и сроки</small></div><div class="metric"><span class="metric-label">Принятые решения</span><strong id="decisionCount">0</strong><small>Из обсуждения совещания</small></div><div class="metric"><span class="metric-label">Транскрипт</span><strong id="segmentCount">0</strong><small>Реплики с таймкодами</small></div><div class="metric"><span class="metric-label">Уверенность модели</span><strong id="confidenceValue">—</strong><small>Средняя оценка · Не гарантия точности</small></div></div>
+        <section class="panel summary-panel" aria-labelledby="summaryHeading"><div class="panel-heading"><h3 id="summaryHeading">Краткое содержание</h3></div><p class="summary-text" id="summaryText"></p><div class="topics-section"><h4>Ключевые темы</h4><div class="topic-list" id="topicList"></div></div></section>
+        <div class="content-grid">
+          <div class="primary-column">
+            <section class="panel tasks-panel" aria-labelledby="tasksHeading"><div class="panel-heading"><div><div class="eyebrow">ОТ ОБСУЖДЕНИЯ К ДЕЙСТВИЮ</div><h3 id="tasksHeading">Поручения</h3></div><span class="panel-note">Проверьте и уточните<br>перед экспортом</span></div><div id="taskList" class="task-list"></div><div class="export-footer"><p>Изменения попадут в протокол.<br><span>Проверьте формулировки по аудиозаписи.</span></p><button class="primary-btn" id="exportBtn">Скачать протокол DOCX</button></div></section>
+            <section class="panel decisions-panel" aria-labelledby="decisionsHeading"><div class="panel-heading"><h3 id="decisionsHeading">Принятые решения</h3><span class="panel-note">Проверьте по первоисточнику</span></div><div id="decisionList" class="decision-list"></div></section>
+            <details class="panel transcript-panel"><summary class="panel-heading"><div><h3>Транскрипт</h3><p>Полный текст совещания с таймкодами</p></div><span class="transcript-toggle"><span class="when-closed">Развернуть</span><span class="when-open">Свернуть</span><span class="chevron" aria-hidden="true">⌄</span></span></summary><p class="panel-note">Нажмите на таймкод или реплику, чтобы перейти к аудиозаписи.</p><div id="transcriptList" class="transcript-list"></div></details>
+          </div>
+          <aside class="secondary-column"><section class="panel audio-panel" aria-labelledby="audioHeading"><div class="panel-heading"><div><div class="eyebrow">АУДИОЗАПИСЬ СОВЕЩАНИЯ</div><h3 id="audioHeading">Первоисточник</h3></div></div><audio id="audioPlayer" controls preload="metadata" aria-label="Аудиозапись совещания"></audio><div class="now-playing" id="nowPlaying" role="status">Нажмите «Проверить в аудио» у поручения или выберите таймкод в транскрипте.</div><div class="audio-note">Сверяйте поручения с исходной записью — контекст важен.</div></section></aside>
+        </div>
       </section>
     </main>
   </div>

@@ -45,6 +45,7 @@ function harness(responses = [], history = historyStore()) {
   const requests = [];
   const objectUrls = [];
   const revokedUrls = [];
+  const downloads = [];
   function element(id) {
     if (!elements.has(id)) {
       const classes = new Set();
@@ -66,6 +67,7 @@ function harness(responses = [], history = historyStore()) {
   const context = vm.createContext({
     AbortController,
     TypeError,
+    TextEncoder,
     addEventListener(type, handler) { events.set(type, [...(events.get(type) || []), handler]); },
     confirm() { return false; },
     Blob,
@@ -74,6 +76,7 @@ function harness(responses = [], history = historyStore()) {
     console: {log() {}, error() {}},
     document: {
       getElementById: element,
+      createElement(tag) { const node = element(`created-${downloads.length}`); if (tag === 'a') downloads.push(node); return node; },
       querySelectorAll() { return []; },
       addEventListener(type, handler) { events.set(type, [...(events.get(type) || []), handler]); },
     },
@@ -93,7 +96,7 @@ function harness(responses = [], history = historyStore()) {
     },
   });
   vm.runInContext(appSource, context, {filename: 'app.js'});
-  return {context, element, events, requests, history, objectUrls, revokedUrls, evaluate: code => vm.runInContext(code, context)};
+  return {context, element, events, requests, history, objectUrls, revokedUrls, downloads, evaluate: code => vm.runInContext(code, context)};
 }
 
 const audioFile = () => ({name: 'meeting.mp3', type: 'audio/mpeg', size: 1234});
@@ -101,7 +104,7 @@ const audioBlob = () => Object.assign(new Blob(['test-only audio bytes'], {type:
 const settle = () => new Promise(resolve => setImmediate(resolve));
 function edit(h, field, value) {
   h.events.get('input').forEach(handler => handler({target: {
-    matches: selector => selector === 'input[data-field]', dataset: {field, index: '0'}, value,
+    matches: selector => selector === 'input[data-field],textarea[data-field]', dataset: {field, index: '0'}, value,
   }}));
 }
 
@@ -120,7 +123,7 @@ test('contract normalization preserves identity and evidence extensions', () => 
   assert.equal(h.context.normalize(result), result);
   assert.deepEqual(h.context.normalize(result).transcript[0].speaker_name_evidence, result.transcript[0].speaker_name_evidence);
   for (const malformed of [null, {}, {meeting: {}, summary: {}, action_items: {}, transcript: []}]) {
-    assert.throws(() => h.context.normalize(malformed), /response|malformed/i);
+    assert.throws(() => h.context.normalize(malformed), /Сервер вернул некорректные данные совещания/);
   }
 });
 
@@ -157,7 +160,7 @@ test('nested malformed payloads are rejected with a clear error before rendering
   for (const change of changes) {
     const result = resultFixture();
     change(result);
-    assert.throws(() => h.context.normalize(result), /malformed meeting JSON.*Повторите обработку/);
+    assert.throws(() => h.context.normalize(result), /некорректные данные совещания.*Повторите обработку/);
   }
   const valid = resultFixture();
   valid.summary.decisions = ['Approved', {text: 'Deferred', source_quote: 'Next week'}];
@@ -167,15 +170,18 @@ test('nested malformed payloads are rejected with a clear error before rendering
 test('render prefers speaker names, falls back to IDs, and never guesses task owner from talker', () => {
   const h = harness();
   h.context.fixture = resultFixture();
+  const original = structuredClone(h.context.fixture);
   h.evaluate('state.data = fixture; render()');
   assert.match(h.element('transcriptList').innerHTML, /Named chair/);
-  assert.match(h.element('transcriptList').innerHTML, /SPEAKER_02/);
+  assert.match(h.element('transcriptList').innerHTML, /Спикер 02/);
+  assert.equal(h.context.fixture.transcript[1].speaker_id, 'SPEAKER_02', 'display localization must not mutate IDs');
   assert.match(h.element('taskList').innerHTML, /data-field="assignee"[^>]*value=""[^>]*placeholder="Не определён"/);
   assert.match(h.element('decisionList').innerHTML, /Approved/);
   const task = {...resultFixture().action_items[0], assignee_speaker_id: 'SPEAKER_02'};
   assert.match(h.context.taskHtml(task, 0), /data-field="assignee"[^>]*value="SPEAKER_02"/);
   task.assignee = 'Named owner';
   assert.match(h.context.taskHtml(task, 0), /data-field="assignee"[^>]*value="Named owner"/);
+  assert.deepEqual(h.context.fixture, original, 'Russian labels and layout must not rewrite backend data');
 });
 
 test('real API path uploads audio and polls queued/processing/completed without substituting result', async () => {
@@ -225,7 +231,7 @@ test('failed processing resets stale result and exposes an error, not a result p
   await settle();
   assert.equal(h.evaluate('state.data'), null);
   assert.equal(h.element('errorBox').hidden, false);
-  assert.match(h.element('errorMessage').textContent, /Нет соединения с backend/);
+  assert.match(h.element('errorMessage').textContent, /Нет соединения с сервером/);
   assert.equal(h.element('uploadView').hidden, false);
   assert.equal(h.element('resultView').hidden, true);
   assert.equal(h.element('exportTopBtn').hidden, true);
@@ -452,7 +458,7 @@ test('processing a second recording keeps the first and restores its original au
   assert.equal(h.history.records.size, 2);
   assert.notEqual(h.evaluate('state.historyId'), firstId);
   await h.context.openHistory(firstId);
-  assert.equal(h.element('meetingTitle').textContent, 'Real response fixture');
+  assert.equal(h.element('meetingTitle').textContent, 'meeting.mp3');
   assert.equal(await h.objectUrls.at(-1).text(), 'test-only audio bytes');
   assert.equal(h.requests.length, 4);
 });
@@ -502,4 +508,73 @@ test('Save button reports storage failure instead of falsely claiming Saved', as
   assert.equal(h.evaluate('state.data.action_items[0].task'), 'Unsaved task title');
   assert.equal(h.evaluate('state.data.action_items[0].source_quote'), 'Prepare report');
   assert.equal((await h.history.get(id)).data.action_items[0].task, 'Prepare report');
+});
+
+test('Russian result layout prioritizes actions and collapses the full transcript', () => {
+  const sections = ['summaryHeading', 'tasksHeading', 'decisionsHeading', 'class="panel transcript-panel"'];
+  const positions = sections.map(marker => htmlSource.indexOf(marker));
+  assert.ok(positions.every((position, i) => position >= 0 && (!i || position > positions[i - 1])));
+  assert.match(htmlSource, /<details class="panel transcript-panel">/);
+  assert.match(htmlSource, /Загрузите запись совещания/);
+  assert.match(htmlSource, /Система подготовит транскрипт, решения, поручения, ответственных и сроки/);
+  assert.equal((htmlSource.match(/Скачать протокол DOCX/g) || []).length, 2);
+  assert.doesNotMatch(htmlSource, /Meeting Protocol|Executive Summary|Action Items|Audio Evidence|Ready for review|Download DOCX/i);
+});
+
+test('task cards preserve evidence attributes and safely render multiline Russian edit controls', () => {
+  const h = harness();
+  const task = {...resultFixture().action_items[0], task: 'Проверить <условия> & сроки\nӘлия', timestamp_start: 134};
+  const card = h.context.taskHtml(task, 2);
+  assert.match(card, /<textarea[^>]*aria-label="Поручение 3"[^>]*data-field="task"[^>]*data-index="2"/);
+  assert.match(card, /Проверить &lt;условия&gt; &amp; сроки\nӘлия/);
+  assert.match(card, /data-evidence="134" data-index="2">▶ Проверить в аудио · 02:14/);
+  assert.match(card, /Ответственный/);
+  assert.match(card, /Срок исполнения/);
+  assert.match(card, /data-save="2"/);
+});
+
+test('textarea and field edits preserve original evidence and reach the existing DOCX exporter', async () => {
+  const h = harness();
+  const result = resultFixture();
+  result.action_items.push({...result.action_items[0], id: 'a2', task: 'Unchanged task'});
+  const original = structuredClone(result);
+  h.context.fixture = result;
+  h.evaluate('state.data = fixture');
+  const values = {task: 'Подготовить отчёт\nдля проверки', assignee: 'Әлия Қасымқызы', deadline: '30 сентября 2026'};
+  const fields = Object.entries(values).map(([field, value]) => ({dataset: {field, index: '0'}, value,
+    matches(selector) { assert.equal(selector, 'input[data-field],textarea[data-field]'); return true; }}));
+  for (const target of fields) h.events.get('input').forEach(handler => handler({target}));
+  const save = {dataset: {save: '0'}, closest() { return {querySelectorAll(selector) {
+    assert.equal(selector, 'input[data-field],textarea[data-field]'); return fields;
+  }}; }};
+  await Promise.all(h.events.get('click').map(handler => handler({target: {closest: selector => selector === '[data-save]' ? save : null}})));
+  assert.equal(save.textContent, 'Сохранено');
+  assert.deepEqual(result.action_items[1], original.action_items[1]);
+  for (const field of ['source_quote', 'timestamp_start', 'timestamp_end']) assert.equal(result.action_items[0][field], original.action_items[0][field]);
+  for (const [field, value] of Object.entries(values)) assert.equal(result.action_items[0][field], value);
+  h.context.exportDocx();
+  const blob = h.objectUrls.at(-1);
+  assert.equal(blob.type, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  assert.deepEqual([...bytes.slice(0, 4)], [80, 75, 3, 4]);
+  const xml = new TextDecoder().decode(bytes);
+  for (const value of Object.values(values)) assert.ok(xml.includes(value));
+  assert.ok(xml.includes('ПРОТОКОЛ СОВЕЩАНИЯ'));
+  assert.ok(xml.includes('Unchanged task'));
+  assert.equal(h.downloads[0].download, 'meeting-protocol.docx');
+  assert.equal(h.downloads[0].clickCalls, 1);
+});
+
+test('multiline task edit survives existing history persistence and reopening', async () => {
+  const h = harness([{body: {job_id: 'stored'}}, {body: {status: 'completed', result: resultFixture()}}]);
+  await h.context.start(audioBlob());
+  const id = h.evaluate('state.historyId');
+  edit(h, 'task', 'Подготовить отчёт\nӘлия Қасымқызы');
+  await h.evaluate('historyWrites');
+  h.context.newMeeting();
+  await h.context.openHistory(id);
+  assert.equal(h.evaluate('state.data.action_items[0].task'), 'Подготовить отчёт\nӘлия Қасымқызы');
+  assert.equal(h.evaluate('state.data.action_items[0].source_quote'), 'Prepare report');
+  assert.equal(h.evaluate('state.data.action_items[0].timestamp_start'), 12);
+  assert.equal(h.requests.length, 2);
 });
