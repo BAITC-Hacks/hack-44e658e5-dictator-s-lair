@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HackAlem AI — Протокол совещания</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">H</span><div><strong>HackAlem AI</strong><small>Meeting intelligence</small></div></div>
+      <div class="sidebar-label">WORKSPACE</div>
+      <button class="nav-item active"><span>▦</span> Meeting protocol</button>
+      <button class="nav-item" id="newMeetingBtn"><span>＋</span> New meeting</button>
+      <div class="sidebar-footer"><span class="status-dot"></span> Local processing<br><small>Data stays on device</small></div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar"><div><div class="eyebrow">MEETING PROTOCOL</div><h1 id="pageTitle">Upload a meeting</h1></div><div class="topbar-actions"><span class="privacy-badge">⌁ On-premise ready</span><button class="ghost-btn" id="exportTopBtn" hidden>Download DOCX</button></div></header>
+
+      <section id="uploadView" class="view-card upload-view">
+        <div class="upload-hero"><div class="hero-icon">◉</div><div><h2>Turn conversation into accountable work</h2><p>Upload a meeting recording and get a reviewable protocol with evidence-backed action items.</p></div></div>
+        <label class="dropzone" id="dropzone"><input id="audioInput" type="file" accept="audio/*,.mp3,.wav,.m4a" /><span class="upload-icon">↑</span><strong>Drop an audio file here</strong><span>or click to browse · MP3, WAV, M4A</span><button type="button" class="primary-btn" id="browseBtn">Choose audio</button></label>
+        <div class="demo-note"><span>✦</span><div><strong>Demo mode is ready</strong><br /><span>Try the sample protocol now, then connect the backend through <code>processMeeting(file)</code>.</span></div><button class="text-btn" id="demoBtn">Open sample →</button></div>
+      </section>
+
+      <section id="processingView" class="view-card processing-view" hidden>
+        <div class="processing-header"><div class="spinner"></div><div><div class="eyebrow">PROCESSING MEETING</div><h2 id="processingFile">Preparing your recording</h2><p id="processingHint">The audio remains local while the protocol is created.</p></div></div>
+        <div class="stage-list"><div class="stage done" data-stage="upload"><span>✓</span><div><strong>Audio uploaded</strong><small>File received and ready</small></div></div><div class="stage active" data-stage="stt"><span>●</span><div><strong>Speech recognition</strong><small>Finding words and speakers</small></div></div><div class="stage" data-stage="tasks"><span>○</span><div><strong>Extracting tasks</strong><small>Linking owners, deadlines and evidence</small></div></div><div class="stage" data-stage="protocol"><span>○</span><div><strong>Generating protocol</strong><small>Preparing the review workspace</small></div></div></div>
+        <div class="processing-tip"><span>◌</span> Exact percentages are intentionally omitted — stages reflect real processing progress.</div>
+      </section>
+
+      <section id="resultView" hidden>
+        <div class="result-meta"><div><div class="eyebrow">PROCESSED MEETING</div><h2 id="meetingTitle"></h2><div class="meta-line"><span id="meetingDate"></span><span id="meetingDuration"></span><span id="meetingLanguage"></span></div></div><div class="result-actions"><span class="ready-pill">● Ready for review</span><button class="primary-btn" id="exportBtn">Download DOCX</button></div></div>
+        <div class="metric-row"><div class="metric"><span class="metric-label">ACTION ITEMS</span><strong id="taskCount">0</strong><small>Review before export</small></div><div class="metric"><span class="metric-label">DECISIONS</span><strong id="decisionCount">0</strong><small>Captured from discussion</small></div><div class="metric"><span class="metric-label">TRANSCRIPT</span><strong id="segmentCount">0</strong><small>Timestamped segments</small></div><div class="metric"><span class="metric-label">CONFIDENCE</span><strong id="confidenceValue">—</strong><small>Average extraction score</small></div></div>
+        <div class="content-grid"><div class="primary-column"><section class="panel"><div class="panel-heading"><div><div class="eyebrow">EXECUTIVE SUMMARY</div><h3>What happened</h3></div></div><p class="summary-text" id="summaryText"></p></section><section class="panel"><div class="panel-heading"><div><div class="eyebrow">KEY TOPICS</div><h3>Discussion map</h3></div></div><div class="topic-list" id="topicList"></div></section><section class="panel"><div class="panel-heading"><div><div class="eyebrow">DECISIONS</div><h3>What was agreed</h3></div></div><div id="decisionList" class="decision-list"></div></section><section class="panel"><div class="panel-heading"><div><div class="eyebrow">ACTION ITEMS</div><h3>Accountability board</h3></div><span class="panel-note">Edit fields before export</span></div><div id="taskList" class="task-list"></div></section></div><aside class="secondary-column"><section class="panel audio-panel"><div class="panel-heading"><div><div class="eyebrow">AUDIO EVIDENCE</div><h3>Listen to the source</h3></div><span class="evidence-label">● LIVE</span></div><audio id="audioPlayer" controls preload="metadata"></audio><div class="now-playing" id="nowPlaying">Select a timestamp or “Play evidence” to hear the source phrase.</div></section><section class="panel transcript-panel"><div class="panel-heading"><div><div class="eyebrow">TRANSCRIPT</div><h3>Conversation timeline</h3></div><span class="panel-note">Click time to seek</span></div><div id="transcriptList" class="transcript-list"></div></section></aside></div>
+      </section>
+    </main>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>
