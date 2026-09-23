@@ -16,6 +16,22 @@ import sherpa_onnx
 REPO = "csukuangfj/speaker-embedding-models"
 REVISION = "0743f301363dec56491a490f6d6cbc9d67f9a3bf"
 FILENAME = "3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx"
+# Benchmarked on both reference recordings; keep all samples and voice features.
+DEFAULT_SPEAKER_THREADS = 8
+
+
+def speaker_threads():
+    """Bound the default to the host, with an explicit CPU tuning override."""
+    value = os.getenv("MEETING_SPEAKER_THREADS")
+    if value is None:
+        return min(DEFAULT_SPEAKER_THREADS, os.cpu_count() or 1)
+    try:
+        threads = int(value)
+    except ValueError as exc:
+        raise ValueError("MEETING_SPEAKER_THREADS must be a positive integer") from exc
+    if threads < 1:
+        raise ValueError("MEETING_SPEAKER_THREADS must be a positive integer")
+    return threads
 
 
 def model_path():
@@ -29,7 +45,7 @@ def model_path():
 @lru_cache(maxsize=1)
 def extractor():
     config = sherpa_onnx.SpeakerEmbeddingExtractorConfig(
-        model=model_path(), num_threads=2, provider="cpu")
+        model=model_path(), num_threads=speaker_threads(), provider="cpu")
     if not config.validate():
         raise RuntimeError("Invalid speaker embedding model")
     return sherpa_onnx.SpeakerEmbeddingExtractor(config)
