@@ -24,13 +24,12 @@
       <section id="uploadView" class="view-card upload-view">
         <div class="upload-hero"><div class="hero-icon">◉</div><div><h2>Turn conversation into accountable work</h2><p>Upload a meeting recording and get a reviewable protocol with evidence-backed action items.</p></div></div>
         <label class="dropzone" id="dropzone"><input id="audioInput" type="file" accept="audio/*,.mp3,.wav,.m4a" /><span class="upload-icon">↑</span><strong>Drop an audio file here</strong><span>or click to browse · MP3, WAV, M4A</span><button type="button" class="primary-btn" id="browseBtn">Choose audio</button></label>
-        <div class="demo-note"><span>✦</span><div><strong>Demo mode is ready</strong><br /><span>Try the sample protocol now, then connect the backend through <code>processMeeting(file)</code>.</span></div><button class="text-btn" id="demoBtn">Open sample →</button></div>
       </section>
 
       <section id="processingView" class="view-card processing-view" hidden>
         <div class="processing-header"><div class="spinner"></div><div><div class="eyebrow">PROCESSING MEETING</div><h2 id="processingFile">Preparing your recording</h2><p id="processingHint">The audio remains local while the protocol is created.</p></div></div>
-        <div class="stage-list"><div class="stage done" data-stage="upload"><span>✓</span><div><strong>Audio uploaded</strong><small>File received and ready</small></div></div><div class="stage active" data-stage="stt"><span>●</span><div><strong>Speech recognition</strong><small>Finding words and speakers</small></div></div><div class="stage" data-stage="tasks"><span>○</span><div><strong>Extracting tasks</strong><small>Linking owners, deadlines and evidence</small></div></div><div class="stage" data-stage="protocol"><span>○</span><div><strong>Generating protocol</strong><small>Preparing the review workspace</small></div></div></div>
-        <div class="processing-tip"><span>◌</span> Exact percentages are intentionally omitted — stages reflect real processing progress.</div>
+        <div class="stage-list"><div class="stage done" data-stage="upload"><span>✓</span><div><strong>Audio uploaded</strong><small>File received and ready</small></div></div><div class="stage active" data-stage="stt"><span>●</span><div><strong>Processing meeting</strong><small>Распознавание и анализ аудиозаписи</small></div></div><div class="stage" data-stage="tasks"><span>○</span><div><strong>Extracting tasks</strong><small>Linking owners, deadlines and evidence</small></div></div><div class="stage" data-stage="protocol"><span>○</span><div><strong>Generating protocol</strong><small>Preparing the review workspace</small></div></div></div>
+        <div class="processing-tip"><span>◌</span> Обработка аудиозаписи может занять несколько минут.</div>
       </section>
 
       <section id="resultView" hidden>

@@ -21,8 +21,10 @@ import numpy as np
 
 try:
     from .speaker_embeddings import diarize
+    from .speaker_context import annotate_speakers, resolve_task_context
 except ImportError:
     from speaker_embeddings import diarize
+    from speaker_context import annotate_speakers, resolve_task_context
 
 
 NAME = r"[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]+(?:\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]+){0,2}"
@@ -133,6 +135,8 @@ def is_action_item(text: str, action: re.Match[str], deadline: re.Match[str] | N
     assignee, or an assignment cue. This removes the previous false positive where
     any action-shaped word in a question was emitted as a task.
     """
+    if QUESTION.search(text) and not IMPERATIVE.search(text):
+        return False
     prefix = text[: action.start()].strip(" ,—:.;")
     direct_imperative = not prefix or prefix.lower() in {"так", "хорошо", "смотрите", "и", "тогда", "значит так"}
     if not (deadline or assignee or ASSIGNMENT_CUE.search(text) or direct_imperative or IMPERATIVE.search(text)):
@@ -177,7 +181,8 @@ def dedupe_tasks(tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def extract_evidence(segments: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     tasks: list[dict[str, Any]] = []
     decisions: list[dict[str, Any]] = []
-    for segment in segments:
+    mapping = annotate_speakers(segments)
+    for index, segment in enumerate(segments):
         text = normalize(segment["text"])
         if not text:
             continue
@@ -187,7 +192,7 @@ def extract_evidence(segments: list[dict[str, Any]]) -> tuple[list[dict[str, Any
             assignee = resolve_assignee(text, has_action.start())
         if has_action and is_action_item(text, has_action, deadline, assignee):
             tasks.append(
-                {
+                resolve_task_context({
                     "task": text,
                     "assignee": assignee,
                     "deadline": deadline.group("value") if deadline else None,
@@ -196,7 +201,7 @@ def extract_evidence(segments: list[dict[str, Any]]) -> tuple[list[dict[str, Any
                     "timestamp_end": round(float(segment["end"]), 3),
                     "source_quote": text,
                     "confidence": round(0.90 if deadline and assignee else 0.72 if deadline or assignee else 0.58, 2),
-                }
+                }, index, segments, mapping)
             )
         if re.search(r"\b(решили|фиксируем|предлагаю|согласен|итого|решение)\b", text, re.I):
             decisions.append(
@@ -252,7 +257,8 @@ def build_contract(
         },
         "action_items": action_items,
         "transcript": [
-            {"speaker": s["speaker"], "start": round(float(s["start"]), 3), "end": round(float(s["end"]), 3), "text": s["text"]}
+            {"speaker": s["speaker"], "start": round(float(s["start"]), 3), "end": round(float(s["end"]), 3), "text": s["text"],
+             **{key: s.get(key) for key in ("speaker_id", "speaker_name", "speaker_name_confidence", "speaker_name_evidence", "addressee")}}
             for s in segments
         ],
     }

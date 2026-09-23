@@ -1,7 +1,6 @@
 /* Production adapter and resilience layer. The AI/STT pipeline stays behind this boundary. */
-const USE_MOCK = false;
 const PROCESS_TIMEOUT_MS = 720000;
-const API_BASE = 'http://127.0.0.1:8000';
+const ADAPTER_API_BASE = 'http://127.0.0.1:8000';
 
 function showError(title, message) {
   $('errorTitle').textContent = title;
@@ -42,30 +41,22 @@ function toSeconds(value) {
 }
 
 function normalize(raw) {
-  const d = clone(MOCK);
+  const d = {meeting: {}, summary: {}};
   validateResponse(raw);
   d.meeting = {...d.meeting, ...raw.meeting};
   d.summary = {...d.summary, ...raw.summary};
   d.summary.key_topics = Array.isArray(raw.summary.key_topics) ? raw.summary.key_topics : [];
   d.summary.decisions = Array.isArray(raw.summary.decisions) ? raw.summary.decisions.map(x => typeof x === 'string' ? x : x.decision || x.text || 'Решение без описания') : [];
   d.action_items = raw.action_items.map((x, i) => ({
-    id: x.id || `task-${i + 1}`, task: x.task || 'Поручение без описания', assignee: x.assignee ?? null,
+    ...x, id: x.id || `task-${i + 1}`, task: x.task || 'Поручение без описания', assignee: x.assignee ?? null,
     deadline: x.deadline ?? null, speaker: x.speaker ?? null, timestamp_start: toSeconds(x.timestamp_start ?? x.start ?? 0),
     timestamp_end: toSeconds(x.timestamp_end ?? x.end ?? x.timestamp_start ?? x.start ?? 0), source_quote: x.source_quote || x.task || '', confidence: Number.isFinite(Number(x.confidence)) ? Number(x.confidence) : null
   }));
-  d.transcript = raw.transcript.map(x => ({speaker: x.speaker ?? null, start: toSeconds(x.start ?? 0), end: toSeconds(x.end ?? x.start ?? 0), text: x.text || ''}));
+  d.transcript = raw.transcript.map(x => ({...x, speaker: x.speaker ?? null, start: toSeconds(x.start ?? 0), end: toSeconds(x.end ?? x.start ?? 0), text: x.text || ''}));
   return d;
 }
 
-function mockProcessMeeting() {
-  return new Promise(resolve => {
-    setProcessingStage('stt');
-    setTimeout(() => { setProcessingStage('tasks'); setTimeout(() => { setProcessingStage('protocol'); setTimeout(() => resolve(normalize(MOCK)), 250); }, 350); }, 450);
-  });
-}
-
 async function processMeeting(file) {
-  if (USE_MOCK) return mockProcessMeeting();
   if (!file) throw new Error('Выберите аудиофайл перед обработкой.');
   if (!file.type.startsWith('audio/') && !/\.(mp3|wav|m4a|ogg|webm)$/i.test(file.name)) throw new Error('Поддерживаются MP3, WAV, M4A, OGG и WebM.');
   if (!file.size) throw new Error('Файл пустой. Выберите другую запись.');
@@ -74,13 +65,13 @@ async function processMeeting(file) {
   const timer = setTimeout(() => controller.abort(), PROCESS_TIMEOUT_MS);
   try {
     const form = new FormData(); form.append('audio', file, file.name);
-    const response = await fetch(`${API_BASE}/api/meetings/process?async=true`, {method:'POST', body:form, signal:controller.signal});
+    const response = await fetch(`${ADAPTER_API_BASE}/api/meetings/process?async=true`, {method:'POST', body:form, signal:controller.signal});
     if (!response.ok) throw new Error(response.status >= 500 ? 'Backend временно недоступен (ошибка сервера).' : `Backend отклонил файл (HTTP ${response.status}).`);
     let queued; try { queued = await response.json(); } catch { throw new Error('Backend вернул невалидный JSON.'); }
     if (!queued.job_id) throw new Error('Backend не вернул идентификатор обработки.');
     for (let attempt = 0; attempt < 360; attempt += 1) {
       await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 500 : 2000));
-      const statusResponse = await fetch(`${API_BASE}/api/meetings/jobs/${encodeURIComponent(queued.job_id)}`, {signal:controller.signal});
+      const statusResponse = await fetch(`${ADAPTER_API_BASE}/api/meetings/jobs/${encodeURIComponent(queued.job_id)}`, {signal:controller.signal});
       if (!statusResponse.ok) throw new Error(`Не удалось получить статус обработки (HTTP ${statusResponse.status}).`);
       let job; try { job = await statusResponse.json(); } catch { throw new Error('Backend вернул невалидный статус обработки.'); }
       if (job.status === 'queued' || job.status === 'processing') { setProcessingStage(job.status === 'queued' ? 'stt' : 'tasks'); continue; }
@@ -106,7 +97,7 @@ function confidenceMeta(value) {
 
 function taskHtml(x, i) {
   const c = confidenceMeta(x.confidence);
-  return `<article class="task-card"><div class="task-header"><div class="task-title"><input class="task-title-input" data-field="task" data-index="${i}" value="${esc(x.task)}" /></div><span class="confidence ${c.cls}">${c.text}</span></div>${c.note ? `<span class="confidence-note">${c.note}</span>` : ''}<div class="task-fields"><label class="field-chip editable"><b>ASSIGNEE</b><input data-field="assignee" data-index="${i}" value="${esc(x.assignee ?? 'Не определён')}" /></label><label class="field-chip editable"><b>DEADLINE</b><input data-field="deadline" data-index="${i}" value="${esc(x.deadline ?? 'Срок не указан')}" /></label><span class="field-chip"><b>SPEAKER</b>${esc(x.speaker ?? '—')}</span></div><div class="task-footer"><div class="source-quote">“${esc(x.source_quote || x.task)}” · ${fmtTime(x.timestamp_start)}–${fmtTime(x.timestamp_end)}</div><div><button class="save-btn" data-save="${i}">Save</button> <button class="evidence-btn" data-evidence="${x.timestamp_start}" data-index="${i}">▶ Проверить в аудио</button></div></div></article>`;
+  return `<article class="task-card"><div class="task-header"><div class="task-title"><input class="task-title-input" data-field="task" data-index="${i}" value="${esc(x.task)}" /></div><span class="confidence ${c.cls}">${c.text}</span></div>${c.note ? `<span class="confidence-note">${c.note}</span>` : ''}<div class="task-fields"><label class="field-chip editable"><b>ASSIGNEE</b><input data-field="assignee" data-index="${i}" value="${esc(x.assignee ?? x.assignee_speaker_id ?? 'Не определён')}" /></label><label class="field-chip editable"><b>DEADLINE</b><input data-field="deadline" data-index="${i}" value="${esc(x.deadline ?? 'Срок не указан')}" /></label><span class="field-chip"><b>SPEAKER</b>${esc(x.speaker_name ?? x.speaker ?? '—')}</span></div><div class="task-footer"><div class="source-quote">“${esc(x.source_quote || x.task)}” · ${fmtTime(x.timestamp_start)}–${fmtTime(x.timestamp_end)}</div><div><button class="save-btn" data-save="${i}">Save</button> <button class="evidence-btn" data-evidence="${x.timestamp_start}" data-index="${i}">▶ Проверить в аудио</button></div></div></article>`;
 }
 
 function render() {
@@ -120,7 +111,7 @@ function render() {
   $('confidenceValue').textContent = withConfidence.length ? `${Math.round(avg*100)}%` : '—';
   $('decisionList').innerHTML = (s.decisions || []).map(x => `<div class="decision">${esc(x)}<div class="decision-meta"><span>Captured from protocol</span></div></div>`).join('') || '<div class="panel-note">Решения не найдены</div>';
   $('taskList').innerHTML = d.action_items.length ? d.action_items.map(taskHtml).join('') : '<div class="panel-note">Поручения не найдены</div>';
-  $('transcriptList').innerHTML = d.transcript.map((x,i) => `<div class="transcript-line" data-start="${x.start}" data-index="${i}"><div class="timestamp">${fmtTime(x.start)}</div><div><div class="speaker">${esc(x.speaker || 'SPEAKER')}</div><div class="transcript-text">${esc(x.text)}</div></div></div>`).join('') || '<div class="panel-note">Транскрипт пуст</div>';
+  $('transcriptList').innerHTML = d.transcript.map((x,i) => `<div class="transcript-line" data-start="${x.start}" data-index="${i}"><div class="timestamp">${fmtTime(x.start)}</div><div><div class="speaker">${esc(x.speaker_name ?? x.speaker_id ?? x.speaker ?? 'SPEAKER')}</div><div class="transcript-text">${esc(x.text)}</div></div></div>`).join('') || '<div class="panel-note">Транскрипт пуст</div>';
   document.querySelectorAll('.transcript-line').forEach(x => x.addEventListener('click', () => seek(Number(x.dataset.start), Number(x.dataset.index))));
   if (state.audioUrl) $('audioPlayer').src = state.audioUrl;
 }
@@ -128,10 +119,9 @@ function render() {
 async function start(file) {
   clearError();
   if (state.audioUrl) { URL.revokeObjectURL(state.audioUrl); state.audioUrl = null; }
-  const isDemo = !file;
   if (file) { state.fileName = file.name; state.audioUrl = URL.createObjectURL(file); }
-  $('processingFile').textContent = file?.name || 'Sample meeting · local demo'; show('processingView');
-  try { const data = isDemo ? await mockProcessMeeting() : await processMeeting(file); state.data = data; render(); show('resultView'); $('exportTopBtn').hidden = false; $('pageTitle').textContent = 'Review protocol'; }
+  $('processingFile').textContent = file?.name || 'Meeting recording'; show('processingView');
+  try { const data = await processMeeting(file); state.data = data; render(); show('resultView'); $('exportTopBtn').hidden = false; $('pageTitle').textContent = 'Review protocol'; }
   catch (error) { show('uploadView'); showError('Не удалось обработать совещание', error.message || 'Неизвестная ошибка.'); }
 }
 

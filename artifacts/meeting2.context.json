@@ -1,0 +1,600 @@
+{
+  "meeting": {
+    "title": "Совещание №2",
+    "date": null,
+    "duration_seconds": 205.6,
+    "language": "",
+    "participants": [
+      "SPEAKER_01",
+      "SPEAKER_02"
+    ]
+  },
+  "summary": {
+    "executive_summary": "Совещание длительностью 206 секунд: распознано 40 реплик, выделено 6 поручений и 3 решений. Требует проверки: speaker-to-name mapping и поручения без явно названного ответственного.",
+    "key_topics": [
+      "коллеги начинаем оперативное совещание формат сегодня такой каждый докладывает по своему",
+      "направлению показатели проблема если есть и что предлагаете начнем с бытого снаурлановна по химическому",
+      "направлению за август выпуск продукции 94 процента от плана недобор в основном по полимерной"
+    ],
+    "decisions": [
+      {
+        "decision": "просрочку документации предлагаю второй вариант соберите совещание с подрядчиками на этой неделе",
+        "speaker": "SPEAKER_01",
+        "timestamp_start": 81.44,
+        "timestamp_end": 86.68,
+        "source_quote": "просрочку документации предлагаю второй вариант соберите совещание с подрядчиками на этой неделе",
+        "confidence": 0.64
+      },
+      {
+        "decision": "согласен проблемов пропускной способности учебного центра очередь на переатестацию тогда",
+        "speaker": "SPEAKER_01",
+        "timestamp_start": 128.08,
+        "timestamp_end": 134.52,
+        "source_quote": "согласен проблемов пропускной способности учебного центра очередь на переатестацию тогда",
+        "confidence": 0.64
+      },
+      {
+        "decision": "подрядчики в основном 3-4 компании постоянно так делают тогда прямое решение пропишите в новых",
+        "speaker": "SPEAKER_02",
+        "timestamp_start": 166.3,
+        "timestamp_end": 171.52,
+        "source_quote": "подрядчики в основном 3-4 компании постоянно так делают тогда прямое решение пропишите в новых",
+        "confidence": 0.64
+      }
+    ]
+  },
+  "action_items": [
+    {
+      "id": "AI-001",
+      "task": "конца недели подготовит претензию а вы параллельно за 2 недели найдите альтернативного",
+      "assignee": null,
+      "deadline": "за 2 недели",
+      "speaker": "SPEAKER_01",
+      "timestamp_start": 46.22,
+      "timestamp_end": 50.08,
+      "source_quote": "конца недели подготовит претензию а вы параллельно за 2 недели найдите альтернативного",
+      "confidence": 0.72,
+      "speaker_name": null,
+      "addressee": null,
+      "assignee_speaker_id": null,
+      "assignee_resolution": "unresolved",
+      "assignee_evidence": [],
+      "assignee_name": null
+    },
+    {
+      "id": "AI-002",
+      "task": "просрочку документации предлагаю второй вариант соберите совещание с подрядчиками на этой неделе",
+      "assignee": null,
+      "deadline": "на этой неделе",
+      "speaker": "SPEAKER_01",
+      "timestamp_start": 81.44,
+      "timestamp_end": 86.68,
+      "source_quote": "просрочку документации предлагаю второй вариант соберите совещание с подрядчиками на этой неделе",
+      "confidence": 0.72,
+      "speaker_name": null,
+      "addressee": null,
+      "assignee_speaker_id": null,
+      "assignee_resolution": "unresolved",
+      "assignee_evidence": [],
+      "assignee_name": null
+    },
+    {
+      "id": "AI-003",
+      "task": "зафиксируйте новый график с промежуточными датами а не только финальный срок сдачи хорошо на",
+      "assignee": null,
+      "deadline": null,
+      "speaker": "SPEAKER_01",
+      "timestamp_start": 86.68,
+      "timestamp_end": 91.58,
+      "source_quote": "зафиксируйте новый график с промежуточными датами а не только финальный срок сдачи хорошо на",
+      "confidence": 0.58,
+      "speaker_name": null,
+      "addressee": null,
+      "assignee_speaker_id": null,
+      "assignee_resolution": "unresolved",
+      "assignee_evidence": [],
+      "assignee_name": null
+    },
+    {
+      "id": "AI-004",
+      "task": "давайте так организуйте дополнительные группы если нужно привлеките внешнего сертифицированного",
+      "assignee": null,
+      "deadline": null,
+      "speaker": "SPEAKER_01",
+      "timestamp_start": 134.52,
+      "timestamp_end": 138.82,
+      "source_quote": "давайте так организуйте дополнительные группы если нужно привлеките внешнего сертифицированного",
+      "confidence": 0.58,
+      "speaker_name": null,
+      "addressee": null,
+      "assignee_speaker_id": null,
+      "assignee_resolution": "unresolved",
+      "assignee_evidence": [],
+      "assignee_name": null
+    },
+    {
+      "id": "AI-005",
+      "task": "подрядчики в основном 3-4 компании постоянно так делают тогда прямое решение пропишите в новых",
+      "assignee": null,
+      "deadline": null,
+      "speaker": "SPEAKER_02",
+      "timestamp_start": 166.3,
+      "timestamp_end": 171.52,
+      "source_quote": "подрядчики в основном 3-4 компании постоянно так делают тогда прямое решение пропишите в новых",
+      "confidence": 0.58,
+      "speaker_name": null,
+      "addressee": null,
+      "assignee_speaker_id": null,
+      "assignee_resolution": "unresolved",
+      "assignee_evidence": [],
+      "assignee_name": null
+    },
+    {
+      "id": "AI-006",
+      "task": "штрафную санкцию за нарушение по текущим договорам с этими подрядчиками направьте",
+      "assignee": null,
+      "deadline": null,
+      "speaker": "SPEAKER_01",
+      "timestamp_start": 176.18,
+      "timestamp_end": 180.28,
+      "source_quote": "штрафную санкцию за нарушение по текущим договорам с этими подрядчиками направьте",
+      "confidence": 0.58,
+      "speaker_name": null,
+      "addressee": null,
+      "assignee_speaker_id": "SPEAKER_02",
+      "assignee_resolution": "speaker_fallback",
+      "assignee_evidence": [
+        {
+          "speaker": "SPEAKER_02",
+          "timestamp_start": 183.98,
+          "timestamp_end": 189.42,
+          "source_quote": "хорошо подготовлю уведомления и обновлю шаблон договора отлично коллеги подытожим",
+          "reason": "explicit_acceptance"
+        }
+      ],
+      "assignee_name": null
+    }
+  ],
+  "transcript": [
+    {
+      "speaker": "SPEAKER_01",
+      "start": 0.0,
+      "end": 4.36,
+      "text": "коллеги начинаем оперативное совещание формат сегодня такой каждый докладывает по своему",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 4.36,
+      "end": 10.34,
+      "text": "направлению показатели проблема если есть и что предлагаете начнем с бытого снаурлановна по химическому",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_02",
+      "start": 10.34,
+      "end": 17.24,
+      "text": "направлению за август выпуск продукции 94 процента от плана недобор в основном по полимерной",
+      "speaker_id": "SPEAKER_02",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_02",
+      "start": 17.24,
+      "end": 24.02,
+      "text": "группе проблема срыв поставки сырья от казахстанского поставщика третий месяц подряд",
+      "speaker_id": "SPEAKER_02",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_02",
+      "start": 24.02,
+      "end": 31.48,
+      "text": "задержка на 5 7 дней из-за этого простаивает линия так с этим тянуть нельзя смотрите параллельно",
+      "speaker_id": "SPEAKER_02",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 31.48,
+      "end": 36.36,
+      "text": "ищите второго поставщика хотя бы на 30 процентов объема чтобы не зависеть от одного и сразу вы",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 36.36,
+      "end": 40.74,
+      "text": "ставлять и претензию нынешнему по договору там же должна быть неустойка за срыв сроков кто",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_02",
+      "start": 40.74,
+      "end": 46.22,
+      "text": "у вас курирует договорную работу есть юрист в департаменте ерлан хорошо пусть ерлан до",
+      "speaker_id": "SPEAKER_02",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 46.22,
+      "end": 50.08,
+      "text": "конца недели подготовит претензию а вы параллельно за 2 недели найдите альтернативного",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 50.08,
+      "end": 55.12,
+      "text": "поставщика хотя бы для расчета потом сравним условия и решим окончательно поняла сделаем",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 55.12,
+      "end": 61.16,
+      "text": "по инвестициям что у нас по инвест программе на сентябрь освоение 68 процентов от планового",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 61.16,
+      "end": 66.8,
+      "text": "бюджета причина отставания по трём проектам подрядчики не успевают создать и документации",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 66.8,
+      "end": 71.42,
+      "text": "соответственно платежи не проходит а по каким конкретно проектом по владарский завод и",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 71.42,
+      "end": 77.22,
+      "text": "еще два проекта поменьше в регионах понятно смотрите здесь два пути либо ждем и теряем темп",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 77.22,
+      "end": 81.44,
+      "text": "либо садимся с подрядчиками и жестко прописываем еженедельные контрольные точки со штрафами за",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 81.44,
+      "end": 86.68,
+      "text": "просрочку документации предлагаю второй вариант соберите совещание с подрядчиками на этой неделе",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 86.68,
+      "end": 91.58,
+      "text": "зафиксируйте новый график с промежуточными датами а не только финальный срок сдачи хорошо на",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 91.58,
+      "end": 96.36,
+      "text": "этой неделе организуем и мне по итогам этого совещания короткую справку что лишь сделаю",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 96.36,
+      "end": 101.9,
+      "text": "ербалат мухтарвич по вашему направлению по травматизму и про безопасности показатель",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 101.9,
+      "end": 108.76,
+      "text": "в норме серьезных инцидентов за месяц не было но есть проблема по обучению у нас",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 108.76,
+      "end": 115.28,
+      "text": "12 процентов персонала на производственных площадках с просроченными сертификатами по",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 115.28,
+      "end": 122.74,
+      "text": "технике безопасности кадровая служба не успевает организовывать переатестацию 12 процентов это",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 122.74,
+      "end": 127.1,
+      "text": "много люди без сертификата фактически работают незаконно это же прямой риск для компании при",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 128.08,
+      "end": 134.52,
+      "text": "согласен проблемов пропускной способности учебного центра очередь на переатестацию тогда",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 134.52,
+      "end": 138.82,
+      "text": "давайте так организуйте дополнительные группы если нужно привлеките внешнего сертифицированного",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 138.82,
+      "end": 143.12,
+      "text": "тренера на подряд чтобы закрыть очередь за месяц это не тот вопрос где можно ждать в общей",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 143.12,
+      "end": 150.16,
+      "text": "очереди понял найду тренера за неделю дам смету подоб группам хорошо жду смету согласуем",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 150.16,
+      "end": 154.38,
+      "text": "бюджет быстро тянуть не будем салтанат ерболовна у вас как с подрядчиками по показателям что",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": "Салтанат Ерболовна"
+    },
+    {
+      "speaker": "SPEAKER_02",
+      "start": 154.38,
+      "end": 159.08,
+      "text": "по количеству активных договоров все в рамках плана но есть проблема участили случаи когда",
+      "speaker_id": "SPEAKER_02",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_02",
+      "start": 159.08,
+      "end": 162.82,
+      "text": "подрядчики выставляют счета с задержкой а потом требуют оплату задним числом из-за этого",
+      "speaker_id": "SPEAKER_02",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_02",
+      "start": 162.82,
+      "end": 166.3,
+      "text": "путаница в бюджете квартала это системная недисциплине ровность или конкретные",
+      "speaker_id": "SPEAKER_02",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_02",
+      "start": 166.3,
+      "end": 171.52,
+      "text": "подрядчики в основном 3-4 компании постоянно так делают тогда прямое решение пропишите в новых",
+      "speaker_id": "SPEAKER_02",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 171.52,
+      "end": 176.18,
+      "text": "договорах жесткий срок выставления счета например 5 рабочих дней после выполнения работ и",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 176.18,
+      "end": 180.28,
+      "text": "штрафную санкцию за нарушение по текущим договорам с этими подрядчиками направьте",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 180.28,
+      "end": 183.98,
+      "text": "официальное уведомление что с определенной даты просроченные счета приниматься не будут",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_02",
+      "start": 183.98,
+      "end": 189.42,
+      "text": "хорошо подготовлю уведомления и обновлю шаблон договора отлично коллеги подытожим",
+      "speaker_id": "SPEAKER_02",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 189.42,
+      "end": 194.02,
+      "text": "бытагостно-урлановна по вашим вопросам неделя максимум 10 дней на поиск альтернативы как",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 194.02,
+      "end": 199.56,
+      "text": "говорил ранее жанду столга твич совещание с подрядчиками жду справку ербалат мухтарвич вы",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 199.56,
+      "end": 204.86,
+      "text": "главное сроки не затяните салтанат ерболовна не больше недели на новый шаблон договора все",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    },
+    {
+      "speaker": "SPEAKER_01",
+      "start": 204.86,
+      "end": 205.6,
+      "text": "свободны спасибо",
+      "speaker_id": "SPEAKER_01",
+      "speaker_name": null,
+      "speaker_name_confidence": 0.0,
+      "speaker_name_evidence": [],
+      "addressee": null
+    }
+  ]
+}
