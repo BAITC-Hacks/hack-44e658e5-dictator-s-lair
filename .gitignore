@@ -6,6 +6,8 @@ venv/
 *.env
 .cache/
 models/
+/artifacts/
+/examples/
 *.mp3
 *.wav
 *.m4a

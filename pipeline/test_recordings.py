@@ -1,14 +1,16 @@
 """Regression replay of real STT/diarization snapshots, without rerunning models."""
 import copy
 import json
+import os
 from pathlib import Path
 import unittest
 
 from run_pipeline import extract_evidence
 
-ARTIFACTS = Path(__file__).resolve().parents[1] / 'artifacts'
+ARTIFACTS = Path(os.environ.get('MEETING_REGRESSION_DIR', Path(__file__).resolve().parents[1] / 'artifacts'))
 
 
+@unittest.skipUnless(all((ARTIFACTS / f'meeting{n}.{kind}.json').is_file() for n in (1, 2) for kind in ('pipeline', 'context')), 'Optional local recording snapshots absent; set MEETING_REGRESSION_DIR to replay them')
 class RealRecordingContextTests(unittest.TestCase):
     def test_both_recordings_replay_and_preserve_original_tasks_deadlines(self):
         for number in (1, 2):

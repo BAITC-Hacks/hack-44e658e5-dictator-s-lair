@@ -1,11 +1,14 @@
 """Text-only regression tests: not an STT accuracy or multilingual benchmark."""
 import copy
 import json
+import os
 from pathlib import Path
 import unittest
 
 from business_pipeline import enrich_protocol
 from protocol_intelligence import build_summary, extract_decisions, document
+
+ARTIFACTS = Path(os.environ.get('MEETING_REGRESSION_DIR', Path(__file__).resolve().parents[1] / 'artifacts'))
 
 
 def turns(*texts):
@@ -101,9 +104,10 @@ class ProtocolSummaryTests(unittest.TestCase):
         self.assertEqual(result["summary"]["custom_extension"], 1)
         self.assertEqual(result["summary"]["topics"][0]["action_item_ids"], ["A1"])
 
+    @unittest.skipUnless(all((ARTIFACTS / f'meeting{n}.context.json').is_file() for n in (1, 2)), 'Optional local recording snapshots absent; set MEETING_REGRESSION_DIR to replay them')
     def test_real_recording_snapshots_have_traceable_facts_not_fabrications(self):
         for number in (1, 2):
-            data = json.loads((Path(__file__).resolve().parents[1] / "artifacts" / f"meeting{number}.context.json").read_text(encoding="utf-8"))
+            data = json.loads((ARTIFACTS / f"meeting{number}.context.json").read_text(encoding="utf-8"))
             result = enrich_protocol(data)
             source, _ = document(data["transcript"])
             self.assertEqual(result["action_items"], data["action_items"])
