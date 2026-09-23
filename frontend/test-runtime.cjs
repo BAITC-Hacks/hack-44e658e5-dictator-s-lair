@@ -45,6 +45,8 @@ function harness(responses = []) {
     return elements.get(id);
   }
   const context = vm.createContext({
+    AbortController,
+    TypeError,
     console: {log() {}, error() {}},
     document: {
       getElementById: element,
@@ -56,7 +58,7 @@ function harness(responses = []) {
       createObjectURL(file) { objectUrls.push(file); return `blob:local-${objectUrls.length}`; },
       revokeObjectURL(url) { revokedUrls.push(url); },
     },
-    setTimeout(fn) { queueMicrotask(fn); return 1; },
+    setTimeout(fn, ms) { if (ms < 10000) queueMicrotask(fn); return 1; },
     clearTimeout() {},
     fetch: async (url, options = {}) => {
       requests.push({url, options});
@@ -138,7 +140,7 @@ test('render prefers speaker names, falls back to IDs, and never guesses task ow
   h.evaluate('state.data = fixture; render()');
   assert.match(h.element('transcriptList').innerHTML, /Named chair/);
   assert.match(h.element('transcriptList').innerHTML, /SPEAKER_02/);
-  assert.match(h.element('taskList').innerHTML, /data-field="assignee"[^>]*value="Not assigned"/);
+  assert.match(h.element('taskList').innerHTML, /data-field="assignee"[^>]*value=""[^>]*placeholder="Не определён"/);
   assert.match(h.element('decisionList').innerHTML, /Approved/);
   const task = {...resultFixture().action_items[0], assignee_speaker_id: 'SPEAKER_02'};
   assert.match(h.context.taskHtml(task, 0), /data-field="assignee"[^>]*value="SPEAKER_02"/);
@@ -186,14 +188,14 @@ test('offline, failed job, malformed result and malformed status remain errors, 
 });
 
 test('failed processing resets stale result and exposes an error, not a result page', async () => {
-  const h = harness([new Error('offline')]);
+  const h = harness([new TypeError('Failed to fetch')]);
   h.context.fixture = resultFixture();
   h.evaluate('state.data = fixture');
   h.context.start(audioFile());
   await settle();
   assert.equal(h.evaluate('state.data'), null);
   assert.equal(h.element('errorBox').hidden, false);
-  assert.match(h.element('errorMessage').textContent, /Backend unavailable/);
+  assert.match(h.element('errorMessage').textContent, /Нет соединения с backend/);
   assert.equal(h.element('uploadView').hidden, false);
   assert.equal(h.element('resultView').hidden, true);
   assert.equal(h.element('exportTopBtn').hidden, true);

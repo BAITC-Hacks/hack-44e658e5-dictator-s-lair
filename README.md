@@ -5,7 +5,51 @@ Core MVP pipeline для кейса Самрук-Қазына: локальна�
 
 Требования и ограничения зафиксированы в [REQUIREMENTS.md](REQUIREMENTS.md).
 
-## Быстрый запуск core pipeline
+## Запуск приложения (Windows PowerShell)
+
+Python 3.11+; локальная приёмка выполнялась на Python 3.14 (64-bit). Node.js для
+приложения не нужен. Все команды ниже выполняются из корня клонированного репозитория.
+Проверьте `python --version`: команда должна вывести версию, а не только `Python`.
+Если работает Windows Store alias, используйте `py` или полный путь к установленному Python.
+
+Установка в отдельное окружение:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r pipeline\requirements.txt
+```
+
+Backend, первое окно PowerShell (оставить работающим):
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn api:app --app-dir pipeline --host 127.0.0.1 --port 8000
+```
+
+Frontend, второе окно PowerShell из того же корня:
+
+```powershell
+.\.venv\Scripts\python.exe -m http.server 5173 --bind 127.0.0.1
+```
+
+Откройте `http://127.0.0.1:5173/frontend/` и выберите MP3. Не открывайте HTML через
+`file://`. Для VS Code Live Server также разрешён `http://127.0.0.1:5500`.
+Backend занимает порт 8000; не запускайте на нём сервер frontend.
+
+Проверка из третьего окна:
+
+```powershell
+curl.exe http://127.0.0.1:8000/api/health
+curl.exe -i -H "Origin: http://127.0.0.1:5173" http://127.0.0.1:8000/api/health
+```
+
+Ожидается HTTP 200, `status: ok`, CORS-заголовок с запрошенным Origin.
+Обязательных переменных окружения и секретов нет. Необязательные параметры backend:
+`MEETING_STT_MODEL=small`, `MEETING_STT_DEVICE=cpu`, `MEETING_STT_COMPUTE_TYPE=int8`
+(это значения по умолчанию). После изменения кода или переменных перезапустите backend.
+Первый запуск скачивает Whisper и модель speaker embeddings; затем используются
+локальные модели из кеша. Обработка на CPU занимает несколько минут.
+
+## Запуск core pipeline отдельно
 
 Нужен Python 3.11+ и локальные зависимости:
 
@@ -27,22 +71,20 @@ python pipeline/run_pipeline.py <path-to-meeting.mp3> --model small --device cpu
 ## Backend API
 
 ```powershell
-uvicorn pipeline.api:app --host 127.0.0.1 --port 8000
-curl http://127.0.0.1:8000/api/health
-curl -F "audio=@meeting.mp3" http://127.0.0.1:8000/api/meetings/process
-# для долгой обработки: POST с ?async=true, затем GET /api/meetings/jobs/{job_id}
+python -m uvicorn api:app --app-dir pipeline --host 127.0.0.1 --port 8000
+curl.exe http://127.0.0.1:8000/api/health
+curl.exe -F "audio=@meeting.mp3" "http://127.0.0.1:8000/api/meetings/process?async=true"
+# Затем GET /api/meetings/jobs/{job_id} до completed или failed.
 ```
 
-`POST /api/meetings/process` синхронный: для CPU STT запрос может занимать несколько
-минут. Он возвращает тот же JSON contract, что и CLI. `GET /api/health` не загружает
-модель и предназначен для liveness-проверки.
+Frontend использует async API: multipart-поле `audio`, ответ `{job_id, status}`,
+затем polling; при `completed` структурированный JSON находится в `result`.
+Без `?async=true` POST работает синхронно. `GET /api/health` не загружает модель.
 
 ## Speaker diarization
 
-Сейчас используется воспроизводимый акустический two-means baseline поверх сегментов
-Whisper. Это отдельная adapter boundary: следующий этап может подключить
-self-hosted pyannote без изменения JSON-контракта. Baseline требует проверки
-пользователем до официальной публикации протокола.
+Используются локальные ERes2Net speaker embeddings и кластеризация сегментов Whisper.
+Идентификация говорящих и извлечённые поручения требуют проверки пользователем.
 
-PDF/DOCX и UI намеренно не включены в первый core milestone: сначала подтверждается
-качество обработки двух предоставленных записей.
+Frontend позволяет прослушать evidence, исправить поручение/ответственного/срок
+и скачать DOCX из текущего результата. Подробнее: [frontend/README.md](frontend/README.md).
