@@ -24,7 +24,22 @@ function resultFixture() {
   };
 }
 
-function harness(responses = []) {
+function historyStore() {
+  const records = new Map();
+  return {
+    records,
+    async list() { return [...records.values()].map(({id, fileName, createdAt, updatedAt}) => ({id, fileName, createdAt, updatedAt})); },
+    async save(record) { records.set(record.id, structuredClone(record)); },
+    async get(id) { return records.has(id) ? structuredClone(records.get(id)) : null; },
+    async updateData(id, data, updatedAt) {
+      if (!records.has(id)) throw new Error('Meeting not found');
+      const record = records.get(id);
+      records.set(id, {...record, data: structuredClone(data), updatedAt});
+    },
+  };
+}
+
+function harness(responses = [], history = historyStore()) {
   const elements = new Map();
   const events = new Map();
   const requests = [];
@@ -40,6 +55,10 @@ function harness(responses = []) {
         addEventListener(type, handler) { this.listeners.set(type, [...(this.listeners.get(type) || []), handler]); },
         click() { this.clickCalls = (this.clickCalls || 0) + 1; },
         play() { this.playCalls = (this.playCalls || 0) + 1; return Promise.resolve(); },
+        pause() { this.pauseCalls = (this.pauseCalls || 0) + 1; },
+        load() {},
+        removeAttribute(name) { if (name === 'src') this.src = ''; },
+        setAttribute(name, value) { this[name] = value; },
       });
     }
     return elements.get(id);
@@ -47,6 +66,11 @@ function harness(responses = []) {
   const context = vm.createContext({
     AbortController,
     TypeError,
+    addEventListener(type, handler) { events.set(type, [...(events.get(type) || []), handler]); },
+    confirm() { return false; },
+    Blob,
+    crypto: require('node:crypto').webcrypto,
+    MeetingHistory: history,
     console: {log() {}, error() {}},
     document: {
       getElementById: element,
@@ -69,14 +93,20 @@ function harness(responses = []) {
     },
   });
   vm.runInContext(appSource, context, {filename: 'app.js'});
-  return {context, element, events, requests, objectUrls, revokedUrls, evaluate: code => vm.runInContext(code, context)};
+  return {context, element, events, requests, history, objectUrls, revokedUrls, evaluate: code => vm.runInContext(code, context)};
 }
 
 const audioFile = () => ({name: 'meeting.mp3', type: 'audio/mpeg', size: 1234});
+const audioBlob = () => Object.assign(new Blob(['test-only audio bytes'], {type: 'audio/mpeg'}), {name: 'meeting.mp3'});
 const settle = () => new Promise(resolve => setImmediate(resolve));
+function edit(h, field, value) {
+  h.events.get('input').forEach(handler => handler({target: {
+    matches: selector => selector === 'input[data-field]', dataset: {field, index: '0'}, value,
+  }}));
+}
 
-test('the shipped page loads app.js only and has no runtime mock/demo path', () => {
-  assert.deepEqual([...htmlSource.matchAll(/<script\s+src="([^"]+)"/g)].map(x => x[1]), ['./app.js']);
+test('the shipped page loads local history before app.js and has no runtime mock/demo path', () => {
+  assert.deepEqual([...htmlSource.matchAll(/<script\s+src="([^"]+)"/g)].map(x => x[1]), ['./history.js', './app.js']);
   for (const source of [appSource, adapterSource, htmlSource]) {
     assert.doesNotMatch(source, /\bMOCK\b|\bUSE_MOCK\b|\bstartDemo\b|demoBtn|Load demo/i);
   }
@@ -245,4 +275,231 @@ test('timestamp playback seeks within the uploaded local audio object URL', asyn
   assert.equal(h.element('audioPlayer').playCalls, 1);
   assert.match(h.element('nowPlaying').textContent, /00:12.*Prepare report/);
   assert.equal(h.requests.length, 2, 'playback must not download audio from backend');
+});
+
+test('completed real response persists JSON and audio; a fresh page restores it without API calls', async () => {
+  const result = resultFixture();
+  const h = harness([{body: {job_id: 'stored'}}, {body: {status: 'completed', result}}]);
+  await h.context.start(audioBlob());
+  assert.equal(h.history.records.size, 1);
+  const id = h.evaluate('state.historyId');
+  const saved = await h.history.get(id);
+  assert.deepEqual(saved.data, result);
+  assert.equal(await saved.audio.text(), 'test-only audio bytes');
+  assert.match(h.element('historyList').innerHTML, /meeting.mp3/);
+  assert.equal(h.element('historyStatus').dataset.error, 'false');
+
+  const reopened = harness([], h.history);
+  await reopened.context.refreshHistory();
+  assert.match(reopened.element('historyList').innerHTML, /meeting.mp3/);
+  await reopened.context.openHistory(id);
+  assert.equal(reopened.element('resultView').hidden, false);
+  assert.equal(reopened.element('summaryText').textContent, result.summary.executive_summary);
+  assert.equal(reopened.element('taskCount').textContent, 1);
+  assert.equal(reopened.element('segmentCount').textContent, 2);
+  reopened.context.seek(12, 0);
+  assert.equal(reopened.element('audioPlayer').currentTime, 12);
+  assert.equal(reopened.element('audioPlayer').playCalls, 1);
+  assert.equal(reopened.requests.length, 0);
+  assert.equal(reopened.objectUrls.length, 1);
+});
+
+test('assignee and deadline edits survive reopening; updates do not duplicate meetings or lose audio', async () => {
+  const h = harness([{body: {job_id: 'stored'}}, {body: {status: 'completed', result: resultFixture()}}]);
+  await h.context.start(audioBlob());
+  const id = h.evaluate('state.historyId');
+  edit(h, 'assignee', 'Confirmed owner');
+  edit(h, 'deadline', 'до конца недели');
+  assert.equal(h.element('newMeetingBtn').disabled, true);
+  h.context.newMeeting();
+  assert.equal(h.evaluate('state.historyId'), id, 'pending writes prevent navigation races');
+  await h.evaluate('historyWrites');
+  assert.equal(h.history.records.size, 1);
+  assert.equal(h.element('historyStatus').textContent, 'Изменения сохранены.');
+  h.context.newMeeting();
+  assert.equal(h.evaluate('state.data'), null);
+  await h.context.openHistory(id);
+  assert.equal(h.evaluate('state.data.action_items[0].assignee'), 'Confirmed owner');
+  assert.equal(h.evaluate('state.data.action_items[0].deadline'), 'до конца недели');
+  assert.equal(await (await h.history.get(id)).audio.text(), 'test-only audio bytes');
+  assert.deepEqual(h.revokedUrls, ['blob:local-1']);
+});
+
+test('failed or malformed processing never creates a history record', async () => {
+  for (const result of [{status: 'failed', error: 'Unable to decode'}, {status: 'completed', result: {}}]) {
+    const h = harness([{body: {job_id: 'bad'}}, {body: result}]);
+    await h.context.start(audioBlob());
+    assert.equal(h.history.records.size, 0);
+    assert.equal(h.evaluate('state.historyId'), null);
+  }
+});
+
+test('storage failure keeps successful protocol visible, warns before leaving, and a later edit retries full save', async () => {
+  const store = historyStore();
+  const save = store.save;
+  store.save = async () => { throw new Error('QuotaExceededError'); };
+  const h = harness([{body: {job_id: 'stored'}}, {body: {status: 'completed', result: resultFixture()}}], store);
+  await h.context.start(audioBlob());
+  assert.equal(h.element('resultView').hidden, false);
+  assert.equal(h.element('errorBox').hidden, true, 'storage failure is not a processing failure');
+  assert.equal(h.element('historyStatus').dataset.error, 'true');
+  assert.match(h.element('historyStatus').textContent, /Не удалось сохранить/);
+  assert.equal(h.evaluate('state.historyUnsaved'), true);
+  const data = h.evaluate('state.data');
+  h.context.newMeeting();
+  assert.equal(h.evaluate('state.data'), data, 'declining discard preserves unsaved result');
+  await h.context.openHistory('missing');
+  assert.equal(h.evaluate('state.data'), data);
+  store.save = save;
+  edit(h, 'assignee', 'Recovery owner');
+  await h.evaluate('historyWrites');
+  await settle();
+  assert.equal(store.records.size, 1);
+  assert.equal(h.evaluate('state.historyUnsaved'), false);
+  assert.equal(h.element('historyStatus').dataset.error, 'false');
+  assert.match(h.element('historyList').innerHTML, /meeting.mp3/);
+  assert.equal([...store.records.values()][0].data.action_items[0].assignee, 'Recovery owner');
+});
+
+test('opening missing or damaged history preserves current valid result and audio', async () => {
+  const h = harness([{body: {job_id: 'stored'}}, {body: {status: 'completed', result: resultFixture()}}]);
+  await h.context.start(audioBlob());
+  const data = h.evaluate('state.data'), audioUrl = h.evaluate('state.audioUrl');
+  for (const record of [null, {data: {}}, {data: resultFixture(), audio: null}]) {
+    h.history.get = async () => record;
+    await h.context.openHistory('bad');
+    assert.equal(h.evaluate('state.data'), data);
+    assert.equal(h.evaluate('state.audioUrl'), audioUrl);
+    assert.equal(h.evaluate('state.restoring'), false);
+    assert.equal(h.element('historyStatus').dataset.error, 'true');
+  }
+});
+
+test('restoring prevents edit and upload races while stored JSON is being read', async () => {
+  const h = harness([{body: {job_id: 'stored'}}, {body: {status: 'completed', result: resultFixture()}}]);
+  await h.context.start(audioBlob());
+  const id = h.evaluate('state.historyId'), record = await h.history.get(id);
+  let finishRead;
+  h.history.get = () => new Promise(resolve => { finishRead = resolve; });
+  const opening = h.context.openHistory(id);
+  await settle();
+  edit(h, 'assignee', 'Should not be accepted while loading');
+  assert.equal(h.evaluate('state.data.action_items[0].assignee'), null);
+  h.context.start(audioBlob());
+  h.context.newMeeting();
+  assert.equal(h.requests.length, 2);
+  assert.equal(h.evaluate('state.historyId'), id);
+  finishRead(record);
+  await opening;
+  assert.equal(h.evaluate('state.restoring'), false);
+  assert.equal(h.element('newMeetingBtn').disabled, false);
+});
+
+test('sidebar escapes saved filenames and reports unavailable browser storage', async () => {
+  const h = harness();
+  h.history.list = async () => [{id: 'safe-id', fileName: '<img src=x onerror=alert(1)>', createdAt: '2026-09-23T08:00:00Z'}];
+  await h.context.refreshHistory();
+  assert.match(h.element('historyList').innerHTML, /&lt;img/);
+  assert.doesNotMatch(h.element('historyList').innerHTML, /<img/);
+  h.history.list = async () => { throw new Error('IndexedDB disabled'); };
+  assert.equal(await h.context.refreshHistory(), false);
+  assert.equal(h.element('historyStatus').dataset.error, 'true');
+});
+
+test('edits made during initial history save are committed after the original record, not overwritten', async () => {
+  const store = historyStore(), save = store.save;
+  let finishSave;
+  store.save = record => new Promise(resolve => { finishSave = async () => { await save(record); resolve(); }; });
+  const h = harness([{body: {job_id: 'stored'}}, {body: {status: 'completed', result: resultFixture()}}], store);
+  const processing = h.context.start(audioBlob());
+  await settle();
+  assert.equal(h.element('resultView').hidden, false);
+  edit(h, 'deadline', 'к среде');
+  await finishSave();
+  await processing;
+  await h.evaluate('historyWrites');
+  assert.equal([...store.records.values()][0].data.action_items[0].deadline, 'к среде');
+  assert.equal(store.records.size, 1);
+  assert.equal(h.evaluate('state.historyUnsaved'), false);
+});
+
+test('a failed edit save cannot silently restore stale stored data over unsaved changes', async () => {
+  const h = harness([{body: {job_id: 'stored'}}, {body: {status: 'completed', result: resultFixture()}}]);
+  await h.context.start(audioBlob());
+  const id = h.evaluate('state.historyId');
+  h.history.updateData = async () => { throw new Error('Storage full'); };
+  edit(h, 'assignee', 'Unsaved owner');
+  await h.evaluate('historyWrites');
+  await h.context.openHistory(id);
+  assert.equal(h.evaluate('state.data.action_items[0].assignee'), 'Unsaved owner');
+  assert.equal((await h.history.get(id)).data.action_items[0].assignee, null);
+  assert.equal(h.element('historyStatus').dataset.error, 'true');
+  let prevented = false;
+  h.events.get('beforeunload')[0]({preventDefault() { prevented = true; }});
+  assert.equal(prevented, true);
+});
+
+test('processing a second recording keeps the first and restores its original audio independently', async () => {
+  const h = harness([
+    {body: {job_id: 'one'}}, {body: {status: 'completed', result: resultFixture()}},
+    {body: {job_id: 'two'}}, {body: {status: 'completed', result: {...resultFixture(), meeting: {title: 'Second meeting'}}}},
+  ]);
+  await h.context.start(audioBlob());
+  const firstId = h.evaluate('state.historyId');
+  h.context.newMeeting();
+  const second = Object.assign(new Blob(['second audio'], {type: 'audio/mpeg'}), {name: 'second.mp3'});
+  await h.context.start(second);
+  assert.equal(h.history.records.size, 2);
+  assert.notEqual(h.evaluate('state.historyId'), firstId);
+  await h.context.openHistory(firstId);
+  assert.equal(h.element('meetingTitle').textContent, 'Real response fixture');
+  assert.equal(await h.objectUrls.at(-1).text(), 'test-only audio bytes');
+  assert.equal(h.requests.length, 4);
+});
+
+test('Save button persists task, assignee and deadline while preserving original evidence', async () => {
+  const h = harness([{body: {job_id: 'stored'}}, {body: {status: 'completed', result: resultFixture()}}]);
+  await h.context.start(audioBlob());
+  const id = h.evaluate('state.historyId');
+  const inputs = Object.entries({task: 'Edited task title', assignee: 'Confirmed owner', deadline: 'к среде', source_quote: 'Must not replace evidence'})
+    .map(([field, value]) => ({dataset: {field}, value}));
+  const button = {dataset: {save: '0'}, disabled: false, textContent: 'Сохранить',
+    closest: selector => selector === '.task-card' ? {querySelectorAll: () => inputs} : null};
+  const event = {target: {closest: selector => selector === '[data-save]' ? button : null}};
+  await Promise.all(h.events.get('click').map(handler => handler(event)));
+  const saved = await h.history.get(id);
+  assert.equal(saved.data.action_items[0].task, 'Edited task title');
+  assert.equal(saved.data.action_items[0].assignee, 'Confirmed owner');
+  assert.equal(saved.data.action_items[0].deadline, 'к среде');
+  assert.equal(saved.data.action_items[0].source_quote, 'Prepare report');
+  assert.equal(saved.data.action_items[0].timestamp_start, 12);
+  assert.equal(saved.data.action_items[0].timestamp_end, 18);
+  assert.equal(await saved.audio.text(), 'test-only audio bytes');
+  assert.equal(button.textContent, 'Сохранено');
+  assert.equal(button.disabled, false);
+  assert.equal(h.history.records.size, 1);
+  const reopened = harness([], h.history);
+  await reopened.context.openHistory(id);
+  assert.equal(reopened.evaluate('state.data.action_items[0].task'), 'Edited task title');
+});
+
+test('Save button reports storage failure instead of falsely claiming Saved', async () => {
+  const h = harness([{body: {job_id: 'stored'}}, {body: {status: 'completed', result: resultFixture()}}]);
+  await h.context.start(audioBlob());
+  const id = h.evaluate('state.historyId');
+  h.history.updateData = async () => { throw new Error('Storage full'); };
+  const inputs = Object.entries({task: 'Unsaved task title', assignee: 'Unsaved owner', deadline: 'до конца недели'})
+    .map(([field, value]) => ({dataset: {field}, value}));
+  const button = {dataset: {save: '0'}, disabled: false, textContent: 'Сохранить',
+    closest: selector => selector === '.task-card' ? {querySelectorAll: () => inputs} : null};
+  const event = {target: {closest: selector => selector === '[data-save]' ? button : null}};
+  await Promise.all(h.events.get('click').map(handler => handler(event)));
+  assert.equal(button.textContent, 'Не сохранено');
+  assert.equal(button.disabled, false);
+  assert.equal(h.evaluate('state.historyUnsaved'), true);
+  assert.equal(h.element('historyStatus').dataset.error, 'true');
+  assert.match(h.element('historyStatus').textContent, /Не удалось сохранить/);
+  assert.equal(h.evaluate('state.data.action_items[0].task'), 'Unsaved task title');
+  assert.equal(h.evaluate('state.data.action_items[0].source_quote'), 'Prepare report');
+  assert.equal((await h.history.get(id)).data.action_items[0].task, 'Prepare report');
 });

@@ -14,6 +14,12 @@
       <div class="sidebar-label">WORKSPACE</div>
       <button class="nav-item active"><span>▦</span> Meeting protocol</button>
       <button class="nav-item" id="newMeetingBtn"><span>＋</span> New meeting</button>
+      <section class="workspace-history" aria-labelledby="historyHeading">
+        <div class="sidebar-label" id="historyHeading">ИСТОРИЯ</div>
+        <div id="historyList" class="history-list"></div>
+        <p id="historyStatus" class="history-status" role="status" aria-live="polite">Загрузка истории…</p>
+        <p class="history-note">Протоколы и аудио сохраняются в этом браузере. Очистка данных сайта удалит историю.</p>
+      </section>
       <div class="sidebar-footer"><span class="status-dot"></span> Local processing<br><small>Data stays on device</small></div>
     </aside>
 
@@ -39,6 +45,7 @@
       </section>
     </main>
   </div>
+  <script src="./history.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
