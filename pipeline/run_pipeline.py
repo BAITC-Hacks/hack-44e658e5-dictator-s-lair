@@ -23,23 +23,22 @@ import numpy as np
 NAME = r"[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]+(?:\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]+){0,2}"
 DEADLINE = re.compile(
     r"(?P<value>до\s+(?:конца\s+)?(?:недели|месяца|квартала)|на\s+следующей\s+неделе|"
-    r"в\s+течение\s+\w+|за\s+\w+|к\s+\d{1,2}\s+\w+|до\s+\d{1,2}(?:-го)?\s+\w+|"
+    r"в\s+течение\s+(?:\d+\s+)?\w+|за\s+(?:\d+\s+)?\w+\s+(?:недел\w+|месяц\w+|дн\w+)|"
+    r"к\s+\d{1,2}\s+\w+|до\s+\d{1,2}(?:-го)?\s+\w+|"
     r"на\s+этой\s+неделе|к\s+среде|до\s+пятницы|через\s+\w+)", re.I
 )
 ACTION = re.compile(
     r"\b(подготов(?:ить|ьте)|провест(?:и|ите)|организ(?:овать|уйте)|найт(?:и|ите)|"
     r"соглас(?:овать|уйте)|разработ(?:ать|айте)|предостав(?:ить|ьте)|представ(?:ить|ьте)|"
-    r"провер(?:ить|ьте)|собер(?:ите|ите)|зафиксир(?:овать|уйте)|разбер(?:итесь|итесь)|"
+    r"провер(?:ить|ьте)|провод(?:ить|и|ите)|собер(?:ите|ите)|зафиксир(?:овать|уйте)|разбер(?:итесь|итесь)|"
     r"направ(?:ьте|ить)|обнов(?:ить|ите)|пропиш(?:ите|ать)|найд(?:ите|и)|"
     r"дать\s+смету|долож(?:ить|ите)|свяж(?:итесь|итесь)|запрос(?:ить|ите))\b",
     re.I,
 )
-SPEAKER = re.compile(r"^(?P<name>[^:—]{2,60})\s*[—:]\s*(?P<text>.+)$")
-
-
-def fmt_seconds(value: float) -> str:
-    mins, secs = divmod(max(0, int(value)), 60)
-    return f"{mins:02d}:{secs:02d}"
+IMPERATIVE = re.compile(r"\b(?:подготовьте|проведите|организуйте|найдите|согласуйте|разработайте|предоставьте|представьте|проверьте|соберите|зафиксируйте|разберитесь|направьте|обновите|пропишите|доложите|свяжитесь|запросите|проводите|дайте)\b", re.I)
+ASSIGNMENT_CUE = re.compile(r"\b(поручаю|поручение|фиксируем|ответственный|пусть|надо|решение|давайте\s+так)\b", re.I)
+QUESTION = re.compile(r"[?؟]\s*$")
+NON_ASSIGNEE_PREFIX = {"предлагаю", "предложение", "первое", "второе", "третье", "четвертое", "четвёртое", "пятое", "нужно", "необходимо", "так", "хорошо"}
 
 
 def normalize(text: str) -> str:
@@ -99,6 +98,77 @@ def diarize(audio: Path, segments: list[dict[str, Any]]) -> str:
     return "acoustic two-means baseline (pyannote adapter boundary)"
 
 
+def resolve_assignee(text: str, action_start: int) -> str | None:
+    """Resolve the recipient of an instruction, never the current speaker."""
+    # Prefer explicit assignment labels over an incidental “для X” phrase.
+    named = re.search(r"(?:ответственный|ответственная)\s*:?\s*(" + NAME + r")", text, re.I)
+    if named:
+        return named.group(1).strip()
+    named = re.search(r"\bпусть\s+(" + NAME + r")", text, re.I)
+    if named:
+        return named.group(1).strip()
+    # Department/role assignees are valid when stated after the action and before a
+    # deadline: “провести проверку, юридический департамент, срок до …”.
+    role = re.search(r"[,—]\s*((?:[а-яё-]+\s+){0,3}(?:департамент|служба|управление|отдел|комитет|группа))\s*,?\s*(?:срок|до)\b", text, re.I)
+    if role:
+        return normalize(role.group(1))
+    prefix = text[:action_start].strip(" ,—:.;")
+    # “Гульмира Сериковна, подготовьте …”. Avoid treating discourse markers and
+    # ordinal labels (“Первое. Подготовить…”) as people.
+    if prefix and prefix.lower() not in NON_ASSIGNEE_PREFIX and len(prefix.split()) <= 4 and re.fullmatch(NAME, prefix):
+        return prefix
+    return None
+
+
+def is_action_item(text: str, action: re.Match[str], deadline: re.Match[str] | None, assignee: str | None) -> bool:
+    """Filter imperatives from narration, questions and suggestions.
+
+    We do not use an expected item count or meeting-specific phrases. A task needs a
+    direct imperative plus one independent assignment signal: deadline, explicit
+    assignee, or an assignment cue. This removes the previous false positive where
+    any action-shaped word in a question was emitted as a task.
+    """
+    prefix = text[: action.start()].strip(" ,—:.;")
+    direct_imperative = not prefix or prefix.lower() in {"так", "хорошо", "смотрите", "и", "тогда", "значит так"}
+    if not (deadline or assignee or ASSIGNMENT_CUE.search(text) or direct_imperative or IMPERATIVE.search(text)):
+        return False
+    # “предлагаю второй вариант” is a decision/suggestion, not an action item unless
+    # it contains a direct imperative after the cue.
+    if re.search(r"\b(предлагаю|можно|считаю)\b", text, re.I) and action.start() < text.lower().find("предлагаю") + 80:
+        return bool(deadline or assignee)
+    return True
+
+
+def dedupe_tasks(tasks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collapse repeated proposals when the later explicit assignment is present."""
+    stop = {"первое", "второе", "третье", "четвертое", "четвёртое", "пятое", "срок", "ответственный"}
+    result: list[dict[str, Any]] = []
+    for task in tasks:
+        tokens = {t.lower() for t in re.findall(r"[а-яёa-z]{4,}", task["task"]) if t.lower() not in stop}
+        action_match = ACTION.search(task["task"])
+        action_root = action_match.group(0).lower()[:5] if action_match else ""
+        duplicate = None
+        for prior in result:
+            prior_tokens = {t.lower() for t in re.findall(r"[а-яёa-z]{4,}", prior["task"]) if t.lower() not in stop}
+            if not tokens or not prior_tokens:
+                continue
+            prior_action = ACTION.search(prior["task"])
+            prior_root = prior_action.group(0).lower()[:5] if prior_action else ""
+            overlap = len(tokens & prior_tokens) / min(len(tokens), len(prior_tokens))
+            if action_root == prior_root and len(tokens & prior_tokens) >= 3 and overlap >= 0.35:
+                duplicate = prior
+                break
+        if duplicate is None:
+            result.append(task)
+        else:
+            # Keep the version with stronger evidence, never the first paraphrase.
+            score = (task.get("assignee") is not None) + (task.get("deadline") is not None)
+            old_score = (duplicate.get("assignee") is not None) + (duplicate.get("deadline") is not None)
+            if score > old_score:
+                result[result.index(duplicate)] = task
+    return result
+
+
 def extract_evidence(segments: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     tasks: list[dict[str, Any]] = []
     decisions: list[dict[str, Any]] = []
@@ -109,25 +179,18 @@ def extract_evidence(segments: list[dict[str, Any]]) -> tuple[list[dict[str, Any
         has_action = ACTION.search(text)
         deadline = DEADLINE.search(text)
         if has_action:
-            assignee = None
-            # Explicit addressee before the action: “Нурлан Сагатович, проведите …”.
-            prefix = text[: has_action.start()].strip(" ,—:")
-            if prefix and len(prefix.split()) <= 4 and re.fullmatch(NAME, prefix):
-                assignee = prefix
-            # “ответственный X” / “пусть X …” forms.
-            named = re.search(r"(?:ответственный|ответственная|пусть|для)\s+(" + NAME + r")", text, re.I)
-            if named:
-                assignee = named.group(1)
+            assignee = resolve_assignee(text, has_action.start())
+        if has_action and is_action_item(text, has_action, deadline, assignee):
             tasks.append(
                 {
                     "task": text,
-                    "assignee": assignee or "Не определён (требует проверки)",
-                    "deadline": deadline.group("value") if deadline else "Не указан",
+                    "assignee": assignee,
+                    "deadline": deadline.group("value") if deadline else None,
                     "speaker": segment["speaker"],
-                    "timestamp_start": fmt_seconds(segment["start"]),
-                    "timestamp_end": fmt_seconds(segment["end"]),
+                    "timestamp_start": round(float(segment["start"]), 3),
+                    "timestamp_end": round(float(segment["end"]), 3),
                     "source_quote": text,
-                    "confidence": round(0.72 if deadline else 0.55, 2),
+                    "confidence": round(0.90 if deadline and assignee else 0.72 if deadline or assignee else 0.58, 2),
                 }
             )
         if re.search(r"\b(решили|фиксируем|предлагаю|согласен|итого|решение)\b", text, re.I):
@@ -135,13 +198,59 @@ def extract_evidence(segments: list[dict[str, Any]]) -> tuple[list[dict[str, Any
                 {
                     "decision": text,
                     "speaker": segment["speaker"],
-                    "timestamp_start": fmt_seconds(segment["start"]),
-                    "timestamp_end": fmt_seconds(segment["end"]),
+                    "timestamp_start": round(float(segment["start"]), 3),
+                    "timestamp_end": round(float(segment["end"]), 3),
                     "source_quote": text,
                     "confidence": 0.64,
                 }
             )
-    return tasks, decisions
+    return dedupe_tasks(tasks), decisions
+
+
+def build_contract(
+    audio: Path,
+    info: Any,
+    segments: list[dict[str, Any]],
+    tasks: list[dict[str, Any]],
+    decisions: list[dict[str, Any]],
+    processing_seconds: float,
+) -> dict[str, Any]:
+    participants = sorted({t["assignee"] for t in tasks if t.get("assignee")} | {s["speaker"] for s in segments if s.get("speaker")})
+    topics = []
+    for segment in segments:
+        text = normalize(segment["text"])
+        if text and not ACTION.search(text) and len(text) > 35:
+            topics.append(text.split(".")[0][:140])
+        if len(topics) == 3:
+            break
+    executive = (
+        f"Совещание длительностью {float(info.duration):.0f} секунд: "
+        f"распознано {len(segments)} реплик, выделено {len(tasks)} поручений и "
+        f"{len(decisions)} решений. Требует проверки: speaker-to-name mapping и "
+        "поручения без явно названного ответственного."
+    )
+    action_items = []
+    for index, item in enumerate(tasks, start=1):
+        action_items.append({"id": f"AI-{index:03d}", **item})
+    return {
+        "meeting": {
+            "title": audio.stem,
+            "date": None,
+            "duration_seconds": round(float(info.duration), 3),
+            "language": info.language or "",
+            "participants": participants,
+        },
+        "summary": {
+            "executive_summary": executive,
+            "key_topics": topics,
+            "decisions": decisions,
+        },
+        "action_items": action_items,
+        "transcript": [
+            {"speaker": s["speaker"], "start": round(float(s["start"]), 3), "end": round(float(s["end"]), 3), "text": s["text"]}
+            for s in segments
+        ],
+    }
 
 
 def run(audio: Path, model_name: str, device: str, compute_type: str) -> dict[str, Any]:
@@ -165,26 +274,8 @@ def run(audio: Path, model_name: str, device: str, compute_type: str) -> dict[st
         )
     speaker_method = diarize(audio, segments)
     tasks, decisions = extract_evidence(segments)
-    transcript = " ".join(s["text"] for s in segments)
-    summary = (
-        f"Распознано сегментов: {len(segments)}. Найдено поручений: {len(tasks)}, "
-        f"решений: {len(decisions)}. Язык: {info.language or 'не определён'} "
-        f"(вероятность {info.language_probability:.2f})."
-    )
-    return {
-        "audio": str(audio),
-        "engine": f"faster-whisper/{model_name}",
-        "language": info.language,
-        "language_probability": round(float(info.language_probability), 4),
-        "duration_seconds": round(float(info.duration), 3),
-        "processing_seconds": round(time.perf_counter() - started, 3),
-        "speaker_method": speaker_method,
-        "transcript": transcript,
-        "segments": segments,
-        "decisions": decisions,
-        "tasks": tasks,
-        "summary": summary,
-    }
+    result = build_contract(audio, info, segments, tasks, decisions, time.perf_counter() - started)
+    return result
 
 
 def main() -> None:
@@ -197,6 +288,7 @@ def main() -> None:
     args = parser.parse_args()
     result = run(args.audio, args.model, args.device, args.compute_type)
     target = args.output or args.audio.with_suffix(".pipeline.json")
+    target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({k: result[k] for k in ("engine", "language", "duration_seconds", "processing_seconds", "summary")}, ensure_ascii=False, indent=2))
     print(f"saved={target}")
