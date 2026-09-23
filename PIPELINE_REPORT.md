@@ -15,7 +15,7 @@
 | Запись | Reference | Detected | Matched task/deadline | False positives | Missed |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | №1 | 10 | 10 | 10/10 tasks; 8/10 explicit deadlines | 0 после dedupe | 0 |
-| №2 | 6 | 6 | 6/6 tasks; 3/6 explicit deadlines in audio wording | 0 | 0 |
+| №2 | 6 | 6 | 6/6 tasks; 2/6 explicit deadlines in the detected action segment | 0 | 0 |
 
 В №1 явные assignee labels разрешились для 6/10 поручений; для остальных contract
 возвращает `null`, поскольку имя ответственного отсутствует в том же evidence-фрагменте.
