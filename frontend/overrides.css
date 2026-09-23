@@ -1,4 +1,20 @@
 /* Editable fields and error states share the corporate visual treatment. */
+.result-overview { display:flex; flex-wrap:wrap; align-items:center; gap:12px 24px; margin:0 0 22px; padding:14px 18px; background:#fff; border:1px solid var(--line); border-radius:8px; color:var(--muted); font-size:13px; }
+.result-overview strong { color:var(--ink); font-variant-numeric:tabular-nums; }
+.result-overview .overview-primary { color:var(--navy); font-weight:650; }
+.result-overview .panel-note { margin-left:auto; }
+.facts-panel { margin-bottom:22px; }
+.facts-scroll { overflow-x:auto; }
+.facts-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:13px; line-height:1.6; }
+.facts-table th,.facts-table td { padding:14px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line); overflow-wrap:anywhere; }
+.facts-table thead th { background:#f3f6f8; color:var(--muted); font-size:11px; font-weight:600; }
+.facts-table th:first-child { width:22%; }
+.facts-table tbody th { font-weight:600; }
+.facts-table ul { margin:0; padding-left:16px; }
+.facts-table li + li { margin-top:10px; }
+.facts-table small { display:block; color:var(--muted); font-size:10px; margin-top:3px; }
+.facts-table tr:last-child td,.facts-table tr:last-child th { border-bottom:0; }
+@media (max-width:760px) { .facts-table { min-width:600px; } .result-overview .panel-note { margin-left:0; } }
 .error-box { display:flex; align-items:flex-start; gap:12px; background:#fff5f1; border:1px solid #e5c8bd; color:#813f2f; border-radius:8px; padding:16px; margin:22px 0; }
 .error-box > span { display:grid; place-items:center; width:22px; height:22px; flex-shrink:0; border-radius:50%; background:#a04c37; color:#fff; font-weight:700; }
 .error-box div { flex:1; min-width:0; }

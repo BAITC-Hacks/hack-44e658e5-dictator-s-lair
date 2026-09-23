@@ -127,6 +127,43 @@ test('contract normalization preserves identity and evidence extensions', () => 
   }
 });
 
+function businessTopic() {
+  const evidence={source_quote:'Готовность 23% от плана.',timestamp_start:2,timestamp_end:8,source_segment_indices:[0]};
+  return {title:'Цифровизация',facts:[{metric:'Готовность',value:'23%',context:evidence.source_quote,...evidence}],problems:[],risks:[],action_item_ids:['a1']};
+}
+
+test('business topics are optional for previously saved protocols', () => {
+  const h=harness();h.context.result=resultFixture();h.evaluate('state.data=normalize(result);render()');
+  assert.equal(h.element('factsPanel').hidden,true);
+  assert.equal(h.element('topicCount').textContent,'—');
+});
+
+test('business facts render actual structured data and escape transcript markup', () => {
+  const h=harness(),result=resultFixture(),topic=businessTopic();
+  topic.title='<script>bad</script>';topic.facts[0].context='<img src=x> 23% от плана.';
+  result.summary.topics=[topic];h.context.result=result;h.evaluate('state.data=normalize(result);render()');
+  assert.equal(h.element('factsPanel').hidden,false);
+  assert.equal(h.element('topicCount').textContent,1);
+  assert.match(h.element('factsBody').innerHTML,/23%/);
+  assert.match(h.element('factsBody').innerHTML,/&lt;script&gt;/);
+  assert.doesNotMatch(h.element('factsBody').innerHTML,/<script>|<img/);
+  assert.match(h.element('factsBody').innerHTML,/00:02/);
+});
+
+test('malformed topic evidence is rejected rather than manufactured by frontend', () => {
+  const h=harness();
+  for(const modify of [d=>d.summary.topics={},d=>d.summary.topics[0].facts=null,d=>d.summary.topics[0].facts[0].timestamp_start=-1,d=>d.summary.topics[0].facts[0].context={}]){
+    const result=resultFixture();result.summary.topics=[businessTopic()];modify(result);
+    assert.throws(()=>h.context.normalize(result),/summary.topics/);
+  }
+});
+
+test('zero decisions has a visible honest empty state', () => {
+  const h=harness();h.context.result=resultFixture();h.context.result.summary.decisions=[];
+  h.evaluate('state.data=result;render()');
+  assert.match(h.element('decisionList').innerHTML,/Явные принятые решения не выделены/);
+});
+
 test('nested malformed payloads are rejected with a clear error before rendering', () => {
   const h = harness();
   const changes = [

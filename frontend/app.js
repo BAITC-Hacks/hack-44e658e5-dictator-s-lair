@@ -14,6 +14,18 @@ function normalize(raw){
   if(!object(raw.summary))invalid('summary');
   if(!Array.isArray(raw.summary.key_topics)||!raw.summary.key_topics.every(x=>typeof x==='string'))invalid('summary.key_topics');
   if(!Array.isArray(raw.summary.decisions)||!raw.summary.decisions.every(x=>typeof x==='string'||(object(x)&&typeof(x.decision??x.text)==='string')))invalid('summary.decisions');
+  if(raw.summary.topics!==undefined){
+    if(!Array.isArray(raw.summary.topics))invalid('summary.topics');
+    raw.summary.topics.forEach((topic,i)=>{
+      if(!object(topic)||typeof topic.title!=='string')invalid(`summary.topics[${i}]`);
+      for(const field of ['facts','problems','risks']){
+        if(!Array.isArray(topic[field]))invalid(`summary.topics[${i}].${field}`);
+        for(const item of topic[field]){
+          if(!object(item)||typeof item[field==='facts'?'context':'text']!=='string'||typeof item.source_quote!=='string'||!timestamp(item.timestamp_start)||!timestamp(item.timestamp_end)||item.timestamp_end<item.timestamp_start)invalid(`summary.topics[${i}].${field}.evidence`);
+        }
+      }
+    });
+  }
   if(!Array.isArray(raw.action_items))invalid('action_items');
   if(!Array.isArray(raw.transcript))invalid('transcript');
   raw.action_items.forEach((x,i)=>{
@@ -147,6 +159,13 @@ function newMeeting(){
   show('uploadView');$('exportTopBtn').hidden=true;$('pageTitle').textContent='Протокол совещания';syncWorkspaceNavigation();
 }
 function speakerLabel(value){return esc(String(value??'Спикер').replace(/^SPEAKER_(\d+)$/,'Спикер $1'))}
+function businessFactsHtml(topics){
+  const list=(items,field)=>{
+    const unique=items.filter((item,i)=>items.findIndex(other=>other[field]===item[field])===i);
+    return unique.length?`<ul>${unique.map(item=>`<li>${esc(item[field])}<small>Первоисточник · ${fmtTime(item.timestamp_start)}</small></li>`).join('')}</ul>`:'<span class="panel-note">Не выделены</span>';
+  };
+  return topics.map(topic=>`<tr><th scope="row">${esc(topic.title)}</th><td>${list(topic.facts,'context')}</td><td>${list([...topic.problems,...topic.risks],'text')}</td></tr>`).join('');
+}
 function render(){
   const d=state.data,m=d.meeting,s=d.summary;
   $('meetingTitle').textContent=state.fileName||m.title||'Протокол совещания';
@@ -158,10 +177,13 @@ function render(){
   $('decisionCount').textContent=(s.decisions||[]).length;
   $('taskCount').textContent=d.action_items.length;
   $('segmentCount').textContent=d.transcript.length;
-  const avg=d.action_items.reduce((a,x)=>a+(Number(x.confidence)||0),0)/(d.action_items.length||1);
-  $('confidenceValue').textContent=`${Math.round(avg*100)}%`;
+  const topics=s.topics||[];
+  $('topicCount').textContent=s.topics?topics.length:'—';
+  $('overviewDuration').textContent=fmtTime(m.duration_seconds);
+  $('factsPanel').hidden=!topics.some(topic=>topic.facts.length||topic.problems.length||topic.risks.length);
+  $('factsBody').innerHTML=businessFactsHtml(topics);
   const decisionText=x=>typeof x==='string'?x:(x&&(x.decision||x.text||''));
-  $('decisionList').innerHTML=(s.decisions||[]).map(x=>`<div class="decision">${esc(decisionText(x))}<div class="decision-meta"><span>Из протокола совещания</span></div></div>`).join('');
+  $('decisionList').innerHTML=(s.decisions||[]).map(x=>`<div class="decision">${esc(decisionText(x))}<div class="decision-meta"><span>Из протокола совещания</span></div></div>`).join('')||'<p class="panel-note">Явные принятые решения не выделены. Поручения приведены выше.</p>';
   $('taskList').innerHTML=d.action_items.map((x,i)=>taskHtml(x,i)).join('');
   $('transcriptList').innerHTML=d.transcript.map((x,i)=>`<div class="transcript-line" data-start="${x.start}" data-index="${i}"><div class="timestamp">${fmtTime(x.start)}</div><div><div class="speaker">${speakerLabel(x.speaker_name??x.speaker_id??x.speaker)}</div><div class="transcript-text">${esc(x.text)}</div></div></div>`).join('');
   document.querySelectorAll('.transcript-line').forEach(x=>x.addEventListener('click',()=>seek(Number(x.dataset.start),x.dataset.index)));
