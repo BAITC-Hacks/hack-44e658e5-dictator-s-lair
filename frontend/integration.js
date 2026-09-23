@@ -1,6 +1,7 @@
 /* Production adapter and resilience layer. The AI/STT pipeline stays behind this boundary. */
 const USE_MOCK = false;
-const PROCESS_TIMEOUT_MS = 120000;
+const PROCESS_TIMEOUT_MS = 720000;
+const API_BASE = 'http://127.0.0.1:8000';
 
 function showError(title, message) {
   $('errorTitle').textContent = title;
@@ -72,16 +73,25 @@ async function processMeeting(file) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PROCESS_TIMEOUT_MS);
   try {
-    const form = new FormData(); form.append('file', file);
-    const response = await fetch('/api/meetings/process', {method:'POST', body:form, signal:controller.signal});
+    const form = new FormData(); form.append('audio', file, file.name);
+    const response = await fetch(`${API_BASE}/api/meetings/process?async=true`, {method:'POST', body:form, signal:controller.signal});
     if (!response.ok) throw new Error(response.status >= 500 ? 'Backend временно недоступен (ошибка сервера).' : `Backend отклонил файл (HTTP ${response.status}).`);
-    setProcessingStage('tasks');
-    let payload; try { payload = await response.json(); } catch { throw new Error('Backend вернул невалидный JSON.'); }
-    setProcessingStage('protocol');
-    return normalize(payload);
+    let queued; try { queued = await response.json(); } catch { throw new Error('Backend вернул невалидный JSON.'); }
+    if (!queued.job_id) throw new Error('Backend не вернул идентификатор обработки.');
+    for (let attempt = 0; attempt < 360; attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 500 : 2000));
+      const statusResponse = await fetch(`${API_BASE}/api/meetings/jobs/${encodeURIComponent(queued.job_id)}`, {signal:controller.signal});
+      if (!statusResponse.ok) throw new Error(`Не удалось получить статус обработки (HTTP ${statusResponse.status}).`);
+      let job; try { job = await statusResponse.json(); } catch { throw new Error('Backend вернул невалидный статус обработки.'); }
+      if (job.status === 'queued' || job.status === 'processing') { setProcessingStage(job.status === 'queued' ? 'stt' : 'tasks'); continue; }
+      if (job.status === 'failed') throw new Error(job.error || 'Backend не смог обработать аудиозапись.');
+      if (job.status === 'completed') { setProcessingStage('protocol'); return normalize(job.result); }
+      throw new Error(`Неизвестный статус обработки: ${job.status || 'пустой'}.`);
+    }
+    throw new Error('Обработка превысила 12 минут. Попробуйте более короткую запись.');
   } catch (error) {
-    if (error.name === 'AbortError') throw new Error('Обработка превысила 2 минуты. Попробуйте более короткую запись.');
-    if (error instanceof TypeError) throw new Error('Backend недоступен. Проверьте, запущен ли API на /api/meetings/process.');
+    if (error.name === 'AbortError') throw new Error('Обработка превысила 12 минут. Попробуйте более короткую запись.');
+    if (error instanceof TypeError) throw new Error('Backend недоступен. Проверьте, запущен ли API на 127.0.0.1:8000.');
     throw error;
   } finally { clearTimeout(timer); }
 }
