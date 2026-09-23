@@ -4,3 +4,5 @@ numpy>=2.0
 fastapi>=0.115
 uvicorn>=0.34
 python-multipart>=0.0.20
+sherpa-onnx==1.12.26
+scipy>=1.15,<2

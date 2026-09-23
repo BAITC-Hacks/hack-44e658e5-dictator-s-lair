@@ -19,6 +19,11 @@ from faster_whisper import WhisperModel
 import av
 import numpy as np
 
+try:
+    from .speaker_embeddings import diarize
+except ImportError:
+    from speaker_embeddings import diarize
+
 
 NAME = r"[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]+(?:\s+[А-ЯЁA-Z][А-ЯЁA-Zа-яёa-z-]+){0,2}"
 DEADLINE = re.compile(
@@ -71,7 +76,7 @@ def _audio_features(audio: Path, segments: list[dict[str, Any]]) -> np.ndarray:
     return np.asarray(rows, dtype=np.float32)
 
 
-def diarize(audio: Path, segments: list[dict[str, Any]]) -> str:
+def diarize_baseline(audio: Path, segments: list[dict[str, Any]]) -> str:
     """Assign repeatable acoustic speaker clusters without a cloud diarizer.
 
     This is intentionally an adapter boundary: when pyannote is configured, its
@@ -290,7 +295,7 @@ def main() -> None:
     target = args.output or args.audio.with_suffix(".pipeline.json")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({k: result[k] for k in ("engine", "language", "duration_seconds", "processing_seconds", "summary")}, ensure_ascii=False, indent=2))
+    print(json.dumps({"meeting": result["meeting"], "summary": result["summary"]}, ensure_ascii=False, indent=2))
     print(f"saved={target}")
 
 
